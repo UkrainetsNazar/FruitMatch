@@ -9,17 +9,6 @@ namespace Core.Domain
 
         private readonly Cell[,] _cells;
 
-        public Board(int width, int height)
-        {
-            Width = width;
-            Height = height;
-            _cells = new Cell[width, height];
-
-            for (int x = 0; x < width; x++)
-                for (int y = 0; y < height; y++)
-                    _cells[x, y] = new Cell(new Vector2Int(x, y), isUsable: true);
-        }
-
         public Board(int[,] mask)
         {
             Width = mask.GetLength(0);

@@ -9,8 +9,6 @@ namespace Data.Config
         public class BoardShape
         {
             public string Name;
-            public int Width;
-            public int Height;
 
             [TextArea]
             public string MaskPattern;
@@ -21,12 +19,15 @@ namespace Data.Config
                     .Trim()
                     .Split('\n');
 
-                var mask = new int[Width, Height];
+                int height = rows.Length;
+                int width  = rows[0].Trim().Length;
 
-                for (int y = 0; y < Height; y++)
+                var mask = new int[width, height];
+
+                for (int y = 0; y < height; y++)
                 {
                     var row = rows[y].Trim();
-                    for (int x = 0; x < Width; x++)
+                    for (int x = 0; x < width; x++)
                         mask[x, y] = row[x] == '1' ? 1 : 0;
                 }
 

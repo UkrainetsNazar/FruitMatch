@@ -1,3 +1,4 @@
+using Core.Domain;
 using Core.Interfaces;
 using Data.Config;
 
@@ -6,9 +7,20 @@ public class BoardFactory : IBoardFactory
     private readonly BoardShapeConfig _config;
     private readonly IMatchBoard _matchBoard;
 
-    public void CreateRandom()
+    public BoardFactory(BoardShapeConfig config, IMatchBoard matchBoard)
+    {
+        _config = config;
+        _matchBoard = matchBoard;
+    }
+
+    public Board CreateRandom()
     {
         var shape = _config.GetRandom();
-        _matchBoard.Initialize(shape.GetMask());
+        var mask  = shape.GetMask();
+        var board = new Board(mask);
+
+        _matchBoard.Initialize(board);
+
+        return board;
     }
 }

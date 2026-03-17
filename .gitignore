@@ -70,3 +70,4 @@ crashlytics-build.properties
 
 # Ignore Zenject framework
 Assets/Plugins
+.vscode
