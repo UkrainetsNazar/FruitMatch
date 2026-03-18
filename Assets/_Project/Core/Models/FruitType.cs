@@ -5,7 +5,7 @@ namespace Core.Domain
         Apple,
         Banana,
         Blueberry,
-        Grapes,
+        Grape,
         Orange,
         Pear,
         Strawberry

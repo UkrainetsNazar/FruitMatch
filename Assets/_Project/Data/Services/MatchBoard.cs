@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Core.Domain;
 using Core.Interfaces;
@@ -9,6 +10,8 @@ namespace Data.Services
     {
         private Board _board;
         private readonly IFruitFactory _fruitFactory;
+
+        public event Action OnBoardInitialized;
 
         public Board CurrentBoard => _board;
 
@@ -29,6 +32,8 @@ namespace Data.Services
                         cell.Fruit = _fruitFactory.CreateRandom();
                     }
                 }
+
+            OnBoardInitialized?.Invoke();
         }
 
         public bool TrySwap(Vector2Int from, Vector2Int to)
