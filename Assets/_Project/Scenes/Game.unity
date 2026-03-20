@@ -405,7 +405,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _brightCellPrefab: {fileID: 8531122447836595704, guid: b86e38e969dd34bd6a21a61c797cffb8, type: 3}
   _darkCellPrefab: {fileID: 1766132069991413926, guid: dfce85dac4dfb4277a0a7fbce57d0d65, type: 3}
-  _cellSize: 0.4
+  _pool: {fileID: 1599062148}
+  _fruitConfig: {fileID: 11400000, guid: 866e83060c426486ab1f32ffd02bf3cd, type: 2}
+  _cellSize: 0.5
   _cellSpacing: 0
 --- !u!4 &556168803
 Transform:
@@ -419,7 +421,8 @@ Transform:
   m_LocalPosition: {x: 0, y: -1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1599062147}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1139973608
@@ -551,6 +554,52 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!1 &1599062146
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1599062147}
+  - component: {fileID: 1599062148}
+  m_Layer: 0
+  m_Name: Pool
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1599062147
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1599062146}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 556168803}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1599062148
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1599062146}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aba5663674a0549ed9033a910621aade, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _fruitPrefab: {fileID: 8969808665846095348, guid: d309ab7686b234376bed093c221b1fdb, type: 3}
+  _initialSize: 120
 --- !u!1 &1667088115
 GameObject:
   m_ObjectHideFlags: 0

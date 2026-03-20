@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Linq;
+using Core.Domain;
 using Core.Interfaces;
 using Presentation.Config;
 using Presentation.Pool;
@@ -19,15 +21,23 @@ namespace Presentation.Views
         [Inject] private IMatchBoard _matchBoard;
 
         private Dictionary<Vector2Int, FruitView> _fruitView = new();
+        private Vector2 _startPos;
 
         private void Start()
         {
+            // Listening initialization of board
             _matchBoard.OnBoardInitialized += BuildBoard;
+            // Listening which fruits have to be destroyed
+            _matchBoard.OnMatchesProcessed += OnMatchesProcessed;
+            // Listening how to move our fruits on board
+            _matchBoard.OnGravityApplied += OnGravityApplied;
         }
 
         private void OnDestroy()
         {
             _matchBoard.OnBoardInitialized -= BuildBoard;
+            _matchBoard.OnMatchesProcessed -= OnMatchesProcessed;
+            _matchBoard.OnGravityApplied -= OnGravityApplied;
         }
 
         private void BuildBoard()
@@ -37,7 +47,7 @@ namespace Presentation.Views
             float totalWidth = board.Width * (_cellSize + _cellSpacing) - _cellSpacing;
             float totalHeight = board.Height * (_cellSize + _cellSpacing) - _cellSpacing;
 
-            var startPos = new Vector2(
+            _startPos = new Vector2(
                 -totalWidth / 2f + _cellSize / 2f,
                 -totalHeight / 2f + _cellSize / 2f
             );
@@ -46,25 +56,19 @@ namespace Presentation.Views
             {
                 for (int y = 0; y < board.Height; y++)
                 {
-                    var cell = board.GetCell(new Vector2Int(x, y));
+                    var cell = board.GetCell(x, y);
                     if (!cell.IsUsable) continue;
 
                     var worldPos = new Vector3(
-                        startPos.x + x * (_cellSize + _cellSpacing),
-                        startPos.y + y * (_cellSize + _cellSpacing),
+                        _startPos.x + x * (_cellSize + _cellSpacing),
+                        _startPos.y + y * (_cellSize + _cellSpacing),
                         0f
                     );
 
                     SpawnVisualCell(x, y, worldPos);
 
                     if (cell.Fruit != null)
-                    {
-                        var fruitViewFromPool = _pool.Get();
-                        fruitViewFromPool.transform.position = worldPos;
-                        fruitViewFromPool.transform.SetParent(transform);
-                        fruitViewFromPool.Setup(cell.Fruit, _fruitConfig.GetSprite(cell.Fruit.Type));
-                        _fruitView[new Vector2Int(x, y)] = fruitViewFromPool;
-                    }
+                        SpawnFruitView(new Vector2Int(x, y), cell.Fruit);
                 }
             }
         }
@@ -75,5 +79,53 @@ namespace Presentation.Views
             var cellGO = Instantiate(prefab, worldPos, Quaternion.identity, transform);
             cellGO.name = $"Cell ({x},{y})";
         }
+
+        private void OnMatchesProcessed(List<Vector2Int> destroyedPositions)
+        {
+            foreach (var pos in destroyedPositions)
+            {
+                if (_fruitView.TryGetValue(pos, out var view))
+                {
+                    _pool.Return(view);
+                    _fruitView.Remove(pos);
+                }
+            }
+        }
+
+        private void OnGravityApplied(List<FruitMovement> movements)
+        {
+            foreach (var movement in movements)
+            {
+                if (_fruitView.ContainsKey(movement.From))
+                {
+                    var fruitView = _fruitView[movement.From];
+                    _fruitView.Remove(movement.From);
+                    _fruitView[movement.To] = fruitView;
+
+                    fruitView.transform.position = GridToWorld(movement.To.x, movement.To.y);
+                }
+                else
+                {
+                    var cell = _matchBoard.CurrentBoard.GetCell(movement.To.x, movement.To.y);
+                    SpawnFruitView(movement.To, cell.Fruit);
+                }
+            }
+        }
+
+        private void SpawnFruitView(Vector2Int gridPos, Fruit fruit)
+        {
+            var view = _pool.Get();
+            view.transform.position = GridToWorld(gridPos.x, gridPos.y);
+            view.transform.SetParent(transform);
+            view.Setup(fruit, _fruitConfig.GetSprite(fruit.Type));
+            _fruitView[gridPos] = view;
+        }
+
+        private Vector3 GridToWorld(int x, int y) =>
+            new(
+                _startPos.x + x * (_cellSize + _cellSpacing),
+                _startPos.y + y * (_cellSize + _cellSpacing),
+                0f
+            );
     }
 }

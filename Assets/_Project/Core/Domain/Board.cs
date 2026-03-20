@@ -20,7 +20,7 @@ namespace Core.Domain
                     _cells[x, y] = new Cell(new Vector2Int(x, y), isUsable: mask[x, y] == 1);
         }
 
-        public Cell GetCell(Vector2Int pos) => _cells[pos.x, pos.y];
+        public Cell GetCell(int x, int y) => _cells[x, y];
         public bool IsValid(Vector2Int pos) =>
             pos.x >= 0 && pos.x < Width &&
             pos.y >= 0 && pos.y < Height &&
