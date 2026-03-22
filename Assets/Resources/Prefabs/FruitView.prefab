@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 8280568668297224845}
   - component: {fileID: 8755077921558491010}
   - component: {fileID: 1619647564326944040}
+  - component: {fileID: 6872900076563874788}
   m_Layer: 0
   m_Name: FruitView
   m_TagString: Untagged
@@ -97,3 +98,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ee2d309229adf40219d82c3d21d2a40f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &6872900076563874788
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8969808665846095348}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d285ff5807034dd4bc41f8764c5a7d1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _stepDuration: 0.08
+  _destroyDuration: 1

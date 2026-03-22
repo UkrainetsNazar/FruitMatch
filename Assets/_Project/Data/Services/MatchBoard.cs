@@ -11,11 +11,8 @@ namespace Data.Services
     {
         private Board _board;
         private readonly IFruitFactory _fruitFactory;
-        private BoardGraph _graph;
 
         public event Action OnBoardInitialized;
-        public event Action<List<FruitMovement>> OnGravityApplied;
-        public event Action<List<Vector2Int>> OnMatchesProcessed;
 
         public Board CurrentBoard => _board;
 
@@ -28,7 +25,6 @@ namespace Data.Services
         public void Initialize(Board board)
         {
             _board = board;
-            _graph = new BoardGraph(board);
 
             for (int x = 0; x < _board.Width; x++)
                 for (int y = 0; y < _board.Height; y++)
@@ -69,12 +65,10 @@ namespace Data.Services
                 if (cell != null && cell.Fruit != null)
                     cell.Fruit = null;
             }
-
-            OnMatchesProcessed?.Invoke(new List<Vector2Int>(toDestroy));
         }
 
         //Gravity
-        public void ApplyGravity()
+        public List<FruitMovement> ApplyGravity()
         {
             var movements = new List<FruitMovement>();
             bool anyMoved;
@@ -84,21 +78,38 @@ namespace Data.Services
                 anyMoved = false;
 
                 for (int x = 0; x < _board.Width; x++)
-                    for (int y = _board.Height - 1; y >= 0; y--)
+                    for (int y = 0; y < _board.Height; y++)
                     {
-                        Cell cell = _board.GetCell(x, y);
+                        var cell = _board.GetCell(x, y);
                         if (!cell.IsUsable || cell.Fruit == null) continue;
 
-                        foreach (var neighbourPos in _graph.GetNeighbours(cell.Position))
+                        var downPos = new Vector2Int(x, y - 1);
+
+                        if (_board.IsValid(downPos))
                         {
-                            Cell neighbourCell = _board.GetCell(neighbourPos.x, neighbourPos.y);
-                            if (!neighbourCell.IsUsable || neighbourCell.Fruit != null) continue;
+                            var downCell = _board.GetCell(downPos.x, downPos.y);
 
-                            neighbourCell.Fruit = cell.Fruit;
-                            cell.Fruit = null;
+                            if (downCell.IsUsable && downCell.Fruit == null)
+                            {
+                                MoveFruit(cell, downCell, movements);
+                                anyMoved = true;
+                                continue;
+                            }
+                            else if (downCell.IsUsable && downCell.Fruit != null)
+                                continue;
+                        }
+
+                        var diagLeft = new Vector2Int(x - 1, y - 1);
+                        var diagRight = new Vector2Int(x + 1, y - 1);
+
+                        foreach (var diagPos in new[] { diagLeft, diagRight })
+                        {
+                            if (!_board.IsValid(diagPos)) continue;
+                            var diagCell = _board.GetCell(diagPos.x, diagPos.y);
+                            if (!diagCell.IsUsable || diagCell.Fruit != null) continue;
+
+                            MoveFruit(cell, diagCell, movements);
                             anyMoved = true;
-                            UpdateOrAddMovement(movements, cell.Position, neighbourPos);
-
                             break;
                         }
                     }
@@ -106,8 +117,7 @@ namespace Data.Services
             while (anyMoved);
 
             SpawnNewFruits(movements);
-
-            OnGravityApplied?.Invoke(movements);
+            return movements;
         }
 
         // Helpers
@@ -136,17 +146,21 @@ namespace Data.Services
             for (int x = 0; x < _board.Width; x++)
                 for (int y = 0; y < _board.Height; y++)
                 {
-                    Cell cell = _board.GetCell(x, y);
+                    var cell = _board.GetCell(x, y);
                     if (!cell.IsUsable || cell.Fruit != null) continue;
 
                     var spawnPoint = new Vector2Int(x, _board.Height);
                     cell.Fruit = _fruitFactory.CreateRandom();
 
+                    var path = new List<Vector2Int>();
+                    for (int py = _board.Height; py >= y; py--)
+                        path.Add(new Vector2Int(x, py));
+
                     movements.Add(new FruitMovement
                     {
                         From = spawnPoint,
                         To = cell.Position,
-                        Path = new List<Vector2Int> { spawnPoint, cell.Position }
+                        Path = path
                     });
                 }
         }
@@ -195,6 +209,13 @@ namespace Data.Services
                     }
                 }
             }
+        }
+
+        private void MoveFruit(Cell from, Cell to, List<FruitMovement> movements)
+        {
+            to.Fruit = from.Fruit;
+            from.Fruit = null;
+            UpdateOrAddMovement(movements, from.Position, to.Position);
         }
 
         // Input endpoint

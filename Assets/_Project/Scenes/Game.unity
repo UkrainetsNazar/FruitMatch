@@ -455,6 +455,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boardShapeConfig: {fileID: 11400000, guid: f4d3b415149424b54acf0eabd8d09f46, type: 2}
+  _boardView: {fileID: 556168802}
 --- !u!4 &1139973610
 Transform:
   m_ObjectHideFlags: 0

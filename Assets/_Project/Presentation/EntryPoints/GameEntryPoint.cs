@@ -6,11 +6,11 @@ namespace Presentation.EntryPoints
 {
     public class GameEntryPoint : MonoBehaviour
     {
-        [Inject] private IBoardFactory _boardFactory;
+        [Inject] private IGameController _gameController;
 
-        private void Start()
+        private async void Start()
         {
-            _boardFactory.CreateRandom();
+            await _gameController.StartGame();
         }
     }
 }
