@@ -40,6 +40,11 @@ namespace Core.Installers
                 .Bind<IBoardView>()
                 .FromInstance(_boardView)
                 .AsSingle();
+
+            Container
+                .Bind<PreviewManager>()
+                .FromNew()
+                .AsSingle();
         }
     }
 }

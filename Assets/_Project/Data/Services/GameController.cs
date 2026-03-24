@@ -11,15 +11,18 @@ namespace Data.Services
         private readonly IMatchBoard _matchBoard;
         private readonly IBoardFactory _boardFactory;
         private readonly IBoardView _boardView;
+        private readonly PreviewManager _previewManager;
 
         public GameController(
             IMatchBoard matchBoard,
             IBoardFactory boardFactory,
-            IBoardView boardView)
+            IBoardView boardView,
+            PreviewManager previewManager)
         {
             _matchBoard = matchBoard;
             _boardFactory = boardFactory;
             _boardView = boardView;
+            _previewManager = previewManager;
         }
 
         public async UniTask StartGame()
@@ -51,9 +54,16 @@ namespace Data.Services
             }
         }
 
-        public UniTask OnPlayerSwap(Vector2Int from, Vector2Int to)
+        public async UniTask OnPlayerSwap(Vector2Int from, Vector2Int to)
         {
-            throw new System.NotImplementedException();
+            if (!_matchBoard.TrySwap(from, to))
+            {
+                await _previewManager.ResetPreview();
+                return;
+            }
+
+            await _previewManager.ConfirmPreview();
+            await ProcessBoard();
         }
     }
 }

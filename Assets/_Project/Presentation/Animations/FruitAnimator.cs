@@ -10,7 +10,7 @@ namespace Presentation.Animations
         [SerializeField] private float _stepDuration = 0.08f;
         [SerializeField] private float _destroyDuration = 2f;
 
-        public async UniTask AnimateFall(List<Vector3> worldPath)
+        public async UniTask AnimateFall(List<Vector2> worldPath)
         {
             if (worldPath.Count == 0) return;
 
@@ -33,7 +33,7 @@ namespace Presentation.Animations
                     : Ease.InQuad;
 
                 sequence.Append(
-                    transform.DOMove(worldPath[i], ease_duration)
+                    transform.DOMove(new Vector3(worldPath[i].x, worldPath[i].y, 0f), ease_duration)
                         .SetEase(easeType)
                 );
             }
@@ -41,9 +41,9 @@ namespace Presentation.Animations
             await sequence.AsyncWaitForCompletion();
         }
 
-        public async UniTask AnimateSwap(Vector3 worldPos)
+        public async UniTask AnimateSwap(Vector2 worldPos)
         {
-            await transform.DOMove(worldPos, 0.2f)
+            await transform.DOMove(new Vector3(worldPos.x, worldPos.y, 0f), 0.2f)
                 .SetEase(Ease.OutBack)
                 .AsyncWaitForCompletion();
         }
@@ -57,7 +57,7 @@ namespace Presentation.Animations
             float randomRotation = Random.Range(-180f, 180f);
 
             Vector3 jumpPeak = startPos + new Vector3(horizontalOffset, verticalJump, 0);
-            Vector3 fallEnd = new Vector3(jumpPeak.x, startPos.y - 6f, 0);
+            Vector3 fallEnd = new(jumpPeak.x, startPos.y - 6f, 0);
 
             var sequence = DOTween.Sequence();
 

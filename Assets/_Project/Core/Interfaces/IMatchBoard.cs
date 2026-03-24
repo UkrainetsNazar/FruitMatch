@@ -15,5 +15,6 @@ namespace Core.Interfaces
         List<MatchResult> FindMatches();
         void ProcessMatches(List<MatchResult> matches);
         List<FruitMovement> ApplyGravity();
+        bool HasFruitAt(Vector2Int pos);
     }
 }

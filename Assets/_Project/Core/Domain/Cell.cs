@@ -6,7 +6,6 @@ namespace Core.Domain
     {
         public Vector2Int Position { get; private set; }
         public Fruit Fruit { get; set; }
-        public bool IsEmpty => Fruit == null;
         public bool IsUsable { get; private set; }
 
         public Cell(Vector2Int position, bool isUsable = true)
