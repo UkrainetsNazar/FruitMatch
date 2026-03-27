@@ -5,6 +5,7 @@ using Core.Interfaces;
 using UnityEngine;
 using Zenject;
 using Presentation.Views;
+using Infrastructure.Network;
 
 namespace Core.Installers
 {
@@ -15,36 +16,12 @@ namespace Core.Installers
 
         public override void InstallBindings()
         {
-            Container
-                .Bind<IFruitFactory>()
-                .To<FruitFactory>()
-                .AsSingle();
-
-            Container
-                .Bind<IMatchBoard>()
-                .To<MatchBoard>()
-                .AsSingle();
-
-            Container
-                .Bind<IBoardFactory>()
-                .To<BoardFactory>()
-                .AsSingle()
-                .WithArguments(_boardShapeConfig);
-
-            Container
-                .Bind<IGameController>()
-                .To<GameController>()
-                .AsSingle();
-
-            Container
-                .Bind<IBoardView>()
-                .FromInstance(_boardView)
-                .AsSingle();
-
-            Container
-                .Bind<PreviewManager>()
-                .FromNew()
-                .AsSingle();
+            Container.Bind<IFruitFactory>().To<FruitFactory>().AsSingle();
+            Container.Bind<IMatchBoard>().To<MatchBoard>().AsSingle();
+            Container.Bind<IBoardFactory>().To<BoardFactory>().AsSingle().WithArguments(_boardShapeConfig);
+            Container.Bind<IGameController>().To<GameController>().AsSingle();
+            Container.Bind<IBoardView>().FromInstance(_boardView).AsSingle();
+            Container.Bind<PreviewManager>().FromNew().AsSingle();
         }
     }
 }

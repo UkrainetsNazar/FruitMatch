@@ -12,17 +12,20 @@ namespace Data.Services
         private readonly IBoardFactory _boardFactory;
         private readonly IBoardView _boardView;
         private readonly PreviewManager _previewManager;
+        private readonly IGameStateService _gameState;
 
         public GameController(
             IMatchBoard matchBoard,
             IBoardFactory boardFactory,
             IBoardView boardView,
-            PreviewManager previewManager)
+            PreviewManager previewManager,
+            IGameStateService gameState)
         {
             _matchBoard = matchBoard;
             _boardFactory = boardFactory;
             _boardView = boardView;
             _previewManager = previewManager;
+            _gameState = gameState;
         }
 
         public async UniTask StartGame()
@@ -33,6 +36,8 @@ namespace Data.Services
 
         public async UniTask ProcessBoard()
         {
+            _gameState.SetPhase(GamePhase.Processing);
+
             var matches = _matchBoard.FindMatches();
 
             while (matches.Count > 0)
@@ -52,6 +57,8 @@ namespace Data.Services
 
                 matches = _matchBoard.FindMatches();
             }
+
+            _gameState.SetPhase(GamePhase.Playing);
         }
 
         public async UniTask OnPlayerSwap(Vector2Int from, Vector2Int to)

@@ -19,9 +19,12 @@ namespace Presentation.PlayerInput
         [Inject] private IMatchBoard _matchBoard;
         [Inject] private IGameController _gameController;
         [Inject] private PreviewManager _previewManager;
+        [Inject] private IGameStateService _gameState;
 
         void Update()
         {
+            if (_gameState.CurrentPhase != GamePhase.Playing) return;
+
             if (_isProcessing) return;
 
             if (Input.GetMouseButtonDown(0))
