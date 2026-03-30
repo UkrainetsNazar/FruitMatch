@@ -1,0 +1,160 @@
+using System.Collections.Generic;
+using System.Linq;
+using Core.Domain;
+using Core.Interfaces;
+using Cysharp.Threading.Tasks;
+using Infrastructure.Network;
+using Unity.Netcode;
+using UnityEngine;
+
+namespace Data.Services
+{
+    public class HostGameController : IGameController
+    {
+        private readonly IMatchBoard _matchBoard;
+        private readonly IBoardFactory _boardFactory;
+        private readonly IBoardView _boardView;
+        private readonly PreviewManager _previewManager;
+        private readonly IGameStateService _gameState;
+        private readonly NetworkGameManager _network;
+
+        private ulong _currentTurnPlayerId;
+        private ulong _localPlayerId =>
+            NetworkManager.Singleton.LocalClientId;
+
+        public HostGameController(
+            IMatchBoard matchBoard,
+            IBoardFactory boardFactory,
+            IBoardView boardView,
+            PreviewManager previewManager,
+            IGameStateService gameState,
+            NetworkGameManager network)
+        {
+            _matchBoard = matchBoard;
+            _boardFactory = boardFactory;
+            _boardView = boardView;
+            _previewManager = previewManager;
+            _gameState = gameState;
+            _network = network;
+
+            _network.OnMoveReceived += OnMoveReceived;
+        }
+
+        public async UniTask StartGame()
+        {
+            int seed = Random.Range(0, int.MaxValue);
+            Random.InitState(seed);
+
+            _boardFactory.CreateRandom(out int shapeIndex);
+
+            await WaitForPlayersAsync();
+
+            _network.BroadcastBoardDataClientRpc(shapeIndex, seed);
+            _network.BroadcastGameStartedClientRpc();
+
+            _currentTurnPlayerId = _localPlayerId;
+            _network.BroadcastTurnClientRpc(_currentTurnPlayerId);
+
+            await ProcessBoard();
+            _gameState.SetPhase(GamePhase.Playing);
+        }
+
+        private async UniTask WaitForPlayersAsync()
+        {
+            while (NetworkManager.Singleton.ConnectedClients.Count < 2)
+                await UniTask.Delay(500);
+        }
+
+        public async UniTask OnPlayerSwap(Vector2Int from, Vector2Int to)
+        {
+            if (_currentTurnPlayerId != _localPlayerId) return;
+
+            if (!_matchBoard.TrySwap(from, to))
+            {
+                await _previewManager.ResetPreview();
+                return;
+            }
+
+            await _previewManager.ConfirmPreview();
+
+            _network.BroadcastSwapClientRpc(from, to);
+
+            await ProcessAndBroadcast();
+            SwitchTurn();
+        }
+
+        private async UniTaskVoid HandleClientMove(Vector2Int from, Vector2Int to, ulong senderId)
+        {
+            if (!_matchBoard.TrySwap(from, to)) return;
+
+            _network.BroadcastSwapClientRpc(from, to);
+
+            await ProcessAndBroadcast();
+            SwitchTurn();
+        }
+
+        private void OnMoveReceived(
+            Vector2Int from, Vector2Int to, ulong senderId)
+        {
+            if (_currentTurnPlayerId != senderId) return;
+
+            HandleClientMove(from, to, senderId).Forget();
+        }
+
+        private async UniTask ProcessAndBroadcast()
+        {
+            _gameState.SetPhase(GamePhase.Processing);
+
+            var matches = _matchBoard.FindMatches();
+
+            while (matches.Count > 0)
+            {
+                var destroyed = matches
+                    .SelectMany(m => m.MatchedPositions)
+                    .Distinct()
+                    .ToList();
+
+                _matchBoard.ProcessMatches(matches);
+                var movements = _matchBoard.ApplyGravity();
+
+                _network.BroadcastMatchesClientRpc(destroyed.ToArray());
+                _network.BroadcastGravityClientRpc(
+                    ToNetworkData(movements));
+
+                await UniTask.WhenAll(
+                    _boardView.PlayDestroy(destroyed),
+                    _boardView.PlayGravity(movements, 200)
+                );
+
+                matches = _matchBoard.FindMatches();
+            }
+
+            _gameState.SetPhase(GamePhase.Playing);
+        }
+
+        private void SwitchTurn()
+        {
+            var clients = NetworkManager.Singleton.ConnectedClients.Keys.ToList();
+            _currentTurnPlayerId = clients
+                .First(id => id != _currentTurnPlayerId);
+
+            _network.BroadcastTurnClientRpc(_currentTurnPlayerId);
+        }
+
+        private FruitMovementData[] ToNetworkData(List<FruitMovement> movements)
+        {
+            return movements.Select(m => new FruitMovementData
+            {
+                From = m.From,
+                To = m.To,
+                Path = m.Path.ToArray(),
+                NewFruitType = m.From.y >= _matchBoard.CurrentBoard.Height
+                    ? (int)_matchBoard.CurrentBoard.GetCell(m.To.x, m.To.y).Fruit.Type
+                    : -1
+            }).ToArray();
+        }
+
+        public async UniTask ProcessBoard() =>
+            await ProcessAndBroadcast();
+    }
+}

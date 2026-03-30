@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Core.Domain;
 using Core.Interfaces;
@@ -14,22 +15,22 @@ namespace Data.Services
             _fruitFactory = fruitFactory;
         }
 
-        public List<FruitMovement> Apply(Board board)
+        public List<FruitMovement> Apply(Board board, Func<FruitType> resolveFruitType)
         {
             var movements = new List<FruitMovement>();
             bool anyAction;
-            
+
             do
             {
                 anyAction = false;
 
-                while (ApplyVertical(board, movements)) 
+                while (ApplyVertical(board, movements))
                     anyAction = true;
 
-                if (ApplyDiagonal(board, movements)) 
+                if (ApplyDiagonal(board, movements))
                     anyAction = true;
 
-                if (TrySpawn(board, movements)) 
+                if (TrySpawn(board, movements, resolveFruitType))
                     anyAction = true;
 
             } while (anyAction);
@@ -99,7 +100,7 @@ namespace Data.Services
             return false;
         }
 
-        private bool TrySpawn(Board board, List<FruitMovement> movements)
+        private bool TrySpawn(Board board, List<FruitMovement> movements, Func<FruitType> resolveFruitType)
         {
             bool spawned = false;
             for (int x = 0; x < board.Width; x++)
@@ -111,17 +112,19 @@ namespace Data.Services
 
                     if (cell.Fruit == null && IsTopmostAvailableCell(board, x, y))
                     {
-                        cell.Fruit = _fruitFactory.CreateRandom();
-                        var spawnPoint = new Vector2Int(x, board.Height);
+                        var fruitType = resolveFruitType();
+                        cell.Fruit = _fruitFactory.Create(fruitType);
 
+                        var spawnPoint = new Vector2Int(x, board.Height);
                         movements.Add(new FruitMovement
                         {
                             From = spawnPoint,
                             To = cell.Position,
-                            Path = new List<Vector2Int> { spawnPoint, cell.Position }
+                            Path = new List<Vector2Int> { spawnPoint, cell.Position },
+                            SyncFruitType = (int)fruitType
                         });
                         spawned = true;
-                        break; 
+                        break;
                     }
                     if (cell.Fruit != null) break;
                 }

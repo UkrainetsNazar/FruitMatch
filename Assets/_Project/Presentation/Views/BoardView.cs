@@ -177,8 +177,20 @@ namespace Presentation.Views
         {
             foreach (var move in column)
             {
-                var cell = _matchBoard.CurrentBoard.GetCell(move.To.x, move.To.y);
-                var view = SpawnFruitView(move.To, cell.Fruit);
+                Fruit fruit;
+
+                if (move.SyncFruitType >= 0)
+                {
+                    fruit = new Fruit((FruitType)move.SyncFruitType);
+                }
+                else
+                {
+                    fruit = _matchBoard.CurrentBoard.GetCell(move.To.x, move.To.y).Fruit;
+                }
+
+                if (fruit == null) continue;
+
+                var view = SpawnFruitView(move.To, fruit);
                 view.transform.position = _viewUtils.GridToWorld(move.From);
 
                 view.Animator.AnimateFall(BuildWorldPath(move.Path)).Forget();

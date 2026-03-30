@@ -8,6 +8,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Zenject;
 using Core.Interfaces;
+using Unity.Netcode;
 
 namespace Presentation.UI
 {
@@ -189,19 +190,20 @@ namespace Presentation.UI
 
             await _networkService.StartHostAsync();
 
-            SceneManager.LoadScene("Game");
+            NetworkManager.Singleton.SceneManager.LoadScene(
+                "Game",
+                LoadSceneMode.Single
+            );
         }
 
         private void OnKickedFromLobby()
         {
-            Debug.Log("You've been kicked from lobby");
             ShowBrowsePanel();
             OnRefreshClicked().Forget();
         }
 
         private void OnHostLeftLobby()
         {
-            Debug.Log("Host leave the lobby");
             ShowBrowsePanel();
             OnRefreshClicked().Forget();
         }
@@ -212,11 +214,9 @@ namespace Presentation.UI
             JoinAsClient().Forget();
         }
 
-
         private async UniTaskVoid JoinAsClient()
         {
             await _networkService.StartClientAsync(_pendingRelayCode);
-            SceneManager.LoadScene("Game");
         }
     }
 }

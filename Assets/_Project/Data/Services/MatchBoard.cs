@@ -10,7 +10,7 @@ namespace Data.Services
     {
         private Board _board;
         private readonly IFruitFactory _fruitFactory;
-        
+
         private readonly MatchFinder _matchFinder;
         private readonly GravityProcessor _gravityProcessor;
 
@@ -67,7 +67,12 @@ namespace Data.Services
 
         public List<FruitMovement> ApplyGravity()
         {
-            return _gravityProcessor.Apply(_board);
+            return _gravityProcessor.Apply(_board, () => _fruitFactory.CreateRandom().Type);
+        }
+
+        public List<FruitMovement> ApplyGravityWithTypes(Queue<FruitType> syncedTypes)
+        {
+            return _gravityProcessor.Apply(_board, () => syncedTypes.Dequeue());
         }
 
         public bool TrySwap(Vector2Int from, Vector2Int to)
@@ -107,7 +112,7 @@ namespace Data.Services
         private bool AreNeighbours(Vector2Int a, Vector2Int b)
         {
             var diff = a - b;
-            return (Mathf.Abs(diff.x) == 1 && diff.y == 0) || 
+            return (Mathf.Abs(diff.x) == 1 && diff.y == 0) ||
                    (Mathf.Abs(diff.y) == 1 && diff.x == 0);
         }
     }

@@ -150,22 +150,6 @@ namespace Infrastructure.Network
             }
         }
 
-        public async UniTask<string> GetRelayCodeAsync()
-        {
-            try
-            {
-                _currentLobby = await LobbyService.Instance
-                    .GetLobbyAsync(_currentLobby.Id);
-
-                return _currentLobby.Data["RelayJoinCode"].Value;
-            }
-            catch (LobbyServiceException e)
-            {
-                Debug.LogError($"GetRelayCode failed: {e.Message}");
-                throw;
-            }
-        }
-
         #endregion
 
         #region Lobby Actions

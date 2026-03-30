@@ -8,5 +8,6 @@ namespace Core.Domain
         public Vector2Int From { get; set; }
         public Vector2Int To   { get; set; }
         public List<Vector2Int> Path { get; set; }
+        public int SyncFruitType { get; set; } = -1;
     }
 }

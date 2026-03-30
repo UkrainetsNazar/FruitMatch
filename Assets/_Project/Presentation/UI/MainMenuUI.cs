@@ -12,7 +12,7 @@ namespace Presentation.Canvas
 
         public void OnSingleGameClick()
         {
-            
+            SceneManager.LoadScene("Game");
         }
     }
 }

@@ -15,6 +15,7 @@ namespace Core.Interfaces
         List<MatchResult> FindMatches();
         void ProcessMatches(List<MatchResult> matches);
         List<FruitMovement> ApplyGravity();
+        List<FruitMovement> ApplyGravityWithTypes(Queue<FruitType> syncedTypes);
         bool HasFruitAt(Vector2Int pos);
     }
 }

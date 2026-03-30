@@ -16,11 +16,20 @@ public class BoardFactory : IBoardFactory
     public Board CreateRandom()
     {
         var shape = _config.GetRandom();
-        var mask  = shape.GetMask();
+        var mask = shape.GetMask();
         var board = new Board(mask);
 
         _matchBoard.Initialize(board);
 
+        return board;
+    }
+
+    public Board CreateRandom(out int shapeIndex)
+    {
+        shapeIndex = UnityEngine.Random.Range(0, _config.Shapes.Length);
+        var shape = _config.Shapes[shapeIndex];
+        var board = new Board(shape.GetMask());
+        _matchBoard.Initialize(board);
         return board;
     }
 }
