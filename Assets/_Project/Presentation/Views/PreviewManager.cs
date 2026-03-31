@@ -88,19 +88,8 @@ public class PreviewManager
         await UniTask.WaitUntil(() => !_isAnimating);
 
         _isAnimating = true;
-
-        var fromView = _boardView.TryGetFruitView(_previewFrom);
-        var toView = _boardView.TryGetFruitView(_previewTo);
-
-        if (fromView != null && toView != null)
-        {
-            await UniTask.WhenAll(
-                fromView.Animator.AnimateSwap(_viewUtils.GridToWorld(_previewTo)),
-                toView.Animator.AnimateSwap(_viewUtils.GridToWorld(_previewFrom))
-            );
-        }
-
         _boardView.SwapFruitViewKeys(_previewFrom, _previewTo);
+
         _isPreviewActive = false;
         _isAnimating = false;
     }

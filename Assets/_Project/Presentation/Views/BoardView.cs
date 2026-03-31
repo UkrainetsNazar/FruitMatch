@@ -38,24 +38,28 @@ namespace Presentation.Views
         private void BuildBoard()
         {
             var board = _matchBoard.CurrentBoard;
+            if (board == null) return;
 
-            _viewUtils = new BoardViewUtils(_cellSize, _cellSpacing);
-            _viewUtils.CalculateStartPos(board.Width, board.Height);
-            _previewManager.Initialize(_viewUtils);
+            InitializeUtils(board.Width, board.Height);
 
             for (int x = 0; x < board.Width; x++)
                 for (int y = 0; y < board.Height; y++)
                 {
                     var cell = board.GetCell(x, y);
                     if (!cell.IsUsable) continue;
-
                     var worldPos = _viewUtils.GridToWorld(x, y);
-
                     SpawnVisualCell(x, y, worldPos);
-
                     if (cell.Fruit != null)
                         SpawnFruitView(new Vector2Int(x, y), cell.Fruit);
                 }
+        }
+
+        private void InitializeUtils(int width, int height)
+        {
+            if (_viewUtils != null) return;
+            _viewUtils = new BoardViewUtils(_cellSize, _cellSpacing);
+            _viewUtils.CalculateStartPos(width, height);
+            _previewManager.Initialize(_viewUtils);
         }
 
         public FruitView TryGetFruitView(Vector2Int pos)
@@ -114,10 +118,23 @@ namespace Presentation.Views
             }
 
             await UniTask.WhenAll(tasks);
+            await UniTask.Delay(150);
         }
 
         public async UniTask PlayGravity(List<FruitMovement> movements, int startDelayMs)
         {
+            if (_viewUtils == null)
+            {
+                var board = _matchBoard.CurrentBoard;
+                if (board != null) InitializeUtils(board.Width, board.Height);
+                else
+                {
+                    Debug.LogError("BoardView: MatchBoard.CurrentBoard is NULL during Gravity!");
+                    return;
+                }
+            }
+
+            if (startDelayMs > 0) await UniTask.Delay(startDelayMs);
             await UniTask.Delay(startDelayMs);
 
             var fallTasks = new List<UniTask>();
@@ -194,7 +211,7 @@ namespace Presentation.Views
                 view.transform.position = _viewUtils.GridToWorld(move.From);
 
                 view.Animator.AnimateFall(BuildWorldPath(move.Path)).Forget();
-                await UniTask.Delay(100);
+                await UniTask.Delay(50);
             }
         }
 

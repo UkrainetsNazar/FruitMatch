@@ -12,42 +12,36 @@ namespace Data.Services
     public class HostGameController : IGameController
     {
         private readonly IMatchBoard _matchBoard;
-        private readonly IBoardFactory _boardFactory;
         private readonly IBoardView _boardView;
+        private readonly IBoardFactory _boardFactory;
         private readonly PreviewManager _previewManager;
         private readonly IGameStateService _gameState;
         private readonly NetworkGameManager _network;
 
         private ulong _currentTurnPlayerId;
-        private ulong _localPlayerId =>
-            NetworkManager.Singleton.LocalClientId;
+        private ulong _localPlayerId => NetworkManager.Singleton.LocalClientId;
 
-        public HostGameController(
-            IMatchBoard matchBoard,
-            IBoardFactory boardFactory,
-            IBoardView boardView,
-            PreviewManager previewManager,
-            IGameStateService gameState,
-            NetworkGameManager network)
+        public HostGameController(IMatchBoard matchBoard, IBoardFactory boardFactory, IBoardView boardView, PreviewManager previewManager, IGameStateService gameState, NetworkGameManager network)
         {
             _matchBoard = matchBoard;
-            _boardFactory = boardFactory;
             _boardView = boardView;
+            _boardFactory = boardFactory;
             _previewManager = previewManager;
             _gameState = gameState;
             _network = network;
-
             _network.OnMoveReceived += OnMoveReceived;
         }
 
         public async UniTask StartGame()
         {
-            int seed = Random.Range(0, int.MaxValue);
-            Random.InitState(seed);
-
-            _boardFactory.CreateRandom(out int shapeIndex);
+            _gameState.SetPhase(GamePhase.Lobby);
 
             await WaitForPlayersAsync();
+
+            int seed = UnityEngine.Random.Range(0, int.MaxValue);
+            UnityEngine.Random.InitState(seed);
+
+            _boardFactory.CreateRandom(out int shapeIndex);
 
             _network.BroadcastBoardDataClientRpc(shapeIndex, seed);
             _network.BroadcastGameStartedClientRpc();
@@ -56,13 +50,14 @@ namespace Data.Services
             _network.BroadcastTurnClientRpc(_currentTurnPlayerId);
 
             await ProcessBoard();
+
             _gameState.SetPhase(GamePhase.Playing);
         }
 
         private async UniTask WaitForPlayersAsync()
         {
             while (NetworkManager.Singleton.ConnectedClients.Count < 2)
-                await UniTask.Delay(500);
+                await UniTask.Delay(100);
         }
 
         public async UniTask OnPlayerSwap(Vector2Int from, Vector2Int to)
@@ -75,30 +70,30 @@ namespace Data.Services
                 return;
             }
 
-            await _previewManager.ConfirmPreview();
-
             _network.BroadcastSwapClientRpc(from, to);
+
+            await _boardView.PlaySwap(from, to);
 
             await ProcessAndBroadcast();
             SwitchTurn();
         }
 
-        private async UniTaskVoid HandleClientMove(Vector2Int from, Vector2Int to, ulong senderId)
+        private void OnMoveReceived(Vector2Int from, Vector2Int to, ulong senderId)
+        {
+            if (_currentTurnPlayerId != senderId) return;
+            HandleRemoteMove(from, to).Forget();
+        }
+
+        private async UniTaskVoid HandleRemoteMove(Vector2Int from, Vector2Int to)
         {
             if (!_matchBoard.TrySwap(from, to)) return;
 
             _network.BroadcastSwapClientRpc(from, to);
 
+            await _boardView.PlaySwap(from, to);
+
             await ProcessAndBroadcast();
             SwitchTurn();
-        }
-
-        private void OnMoveReceived(
-            Vector2Int from, Vector2Int to, ulong senderId)
-        {
-            if (_currentTurnPlayerId != senderId) return;
-
-            HandleClientMove(from, to, senderId).Forget();
         }
 
         private async UniTask ProcessAndBroadcast()
@@ -106,25 +101,18 @@ namespace Data.Services
             _gameState.SetPhase(GamePhase.Processing);
 
             var matches = _matchBoard.FindMatches();
-
             while (matches.Count > 0)
             {
-                var destroyed = matches
-                    .SelectMany(m => m.MatchedPositions)
-                    .Distinct()
-                    .ToList();
+                var destroyed = matches.SelectMany(m => m.MatchedPositions).Distinct().ToList();
 
                 _matchBoard.ProcessMatches(matches);
                 var movements = _matchBoard.ApplyGravity();
 
                 _network.BroadcastMatchesClientRpc(destroyed.ToArray());
-                _network.BroadcastGravityClientRpc(
-                    ToNetworkData(movements));
+                _network.BroadcastGravityClientRpc(ToNetworkData(movements));
 
-                await UniTask.WhenAll(
-                    _boardView.PlayDestroy(destroyed),
-                    _boardView.PlayGravity(movements, 200)
-                );
+                await _boardView.PlayDestroy(destroyed);
+                await _boardView.PlayGravity(movements, 0);
 
                 matches = _matchBoard.FindMatches();
             }
@@ -135,26 +123,19 @@ namespace Data.Services
         private void SwitchTurn()
         {
             var clients = NetworkManager.Singleton.ConnectedClients.Keys.ToList();
-            _currentTurnPlayerId = clients
-                .First(id => id != _currentTurnPlayerId);
-
+            _currentTurnPlayerId = clients.First(id => id != _currentTurnPlayerId);
             _network.BroadcastTurnClientRpc(_currentTurnPlayerId);
         }
 
-        private FruitMovementData[] ToNetworkData(List<FruitMovement> movements)
-        {
-            return movements.Select(m => new FruitMovementData
+        private FruitMovementData[] ToNetworkData(List<FruitMovement> movements) =>
+            movements.Select(m => new FruitMovementData
             {
                 From = m.From,
                 To = m.To,
                 Path = m.Path.ToArray(),
-                NewFruitType = m.From.y >= _matchBoard.CurrentBoard.Height
-                    ? (int)_matchBoard.CurrentBoard.GetCell(m.To.x, m.To.y).Fruit.Type
-                    : -1
+                NewFruitType = m.SyncFruitType
             }).ToArray();
-        }
 
-        public async UniTask ProcessBoard() =>
-            await ProcessAndBroadcast();
+        public async UniTask ProcessBoard() => await ProcessAndBroadcast();
     }
 }
