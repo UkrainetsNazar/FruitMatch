@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Core.Domain;
 using Core.Interfaces;
 
@@ -6,14 +7,37 @@ namespace Data.Services
 {
     public class GameStateService : IGameStateService
     {
-        public GamePhase CurrentPhase { get; private set; } = GamePhase.Lobby;
         public PlayerData LocalPlayer { get; private set; }
+        public GamePhase CurrentPhase { get; private set; }
+        private readonly Dictionary<string, PlayerData> _players = new();
 
         public event Action<GamePhase> OnPhaseChanged;
+        public event Action OnDataUpdated;
 
-        public GameStateService()
+        public void UpdateScore(string playerId, int score)
         {
-            LocalPlayer = new PlayerData();
+            EnsurePlayerExists(playerId);
+            _players[playerId].Score = score;
+            OnDataUpdated?.Invoke();
+        }
+
+        public void UpdateMoves(string playerId, int moves)
+        {
+            EnsurePlayerExists(playerId);
+            _players[playerId].MovesLeft = moves;
+            OnDataUpdated?.Invoke();
+        }
+
+        public PlayerData GetPlayerData(string playerId)
+        {
+            EnsurePlayerExists(playerId);
+            return _players[playerId];
+        }
+
+        private void EnsurePlayerExists(string id)
+        {
+            if (!_players.ContainsKey(id))
+                _players[id] = new PlayerData { PlayerId = id.ToString(), MovesLeft = 20 };
         }
 
         public void SetPhase(GamePhase phase)
@@ -22,12 +46,6 @@ namespace Data.Services
 
             CurrentPhase = phase;
             OnPhaseChanged?.Invoke(phase);
-        }
-
-        public void UpdateScore(string playerId, int delta)
-        {
-            if (LocalPlayer.PlayerId == playerId)
-                LocalPlayer.Score += delta;
         }
 
         public void SetLocalPlayer(string playerId, string playerName)

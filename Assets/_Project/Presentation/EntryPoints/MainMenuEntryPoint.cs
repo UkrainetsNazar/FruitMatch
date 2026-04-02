@@ -15,10 +15,7 @@ namespace Presentation.EntryPoints
             await _authManager.InitializeAsync();
 
             if (string.IsNullOrEmpty(_authManager.PlayerId))
-            {
-                Debug.LogError("PlayerId is NULL after init!");
                 return;
-            }
 
             _gameState.SetLocalPlayer(
                 _authManager.PlayerId,

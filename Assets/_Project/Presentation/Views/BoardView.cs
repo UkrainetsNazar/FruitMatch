@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Core.Domain;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
@@ -118,57 +119,41 @@ namespace Presentation.Views
             }
 
             await UniTask.WhenAll(tasks);
-            await UniTask.Delay(150);
+            await UniTask.Delay(50);
         }
 
         public async UniTask PlayGravity(List<FruitMovement> movements, int startDelayMs)
         {
-            if (_viewUtils == null)
-            {
-                var board = _matchBoard.CurrentBoard;
-                if (board != null) InitializeUtils(board.Width, board.Height);
-                else
-                {
-                    Debug.LogError("BoardView: MatchBoard.CurrentBoard is NULL during Gravity!");
-                    return;
-                }
-            }
-
             if (startDelayMs > 0) await UniTask.Delay(startDelayMs);
-            await UniTask.Delay(startDelayMs);
 
-            var fallTasks = new List<UniTask>();
+            var allFallTasks = new List<UniTask>();
+
             foreach (var move in movements)
             {
-                if (move.From.y >= _matchBoard.CurrentBoard.Height) continue;
-
-                if (_fruitView.TryGetValue(move.From, out var view))
+                if (move.From.y < _matchBoard.CurrentBoard.Height)
                 {
-                    _fruitView.Remove(move.From);
-                    _fruitView[move.To] = view;
-                    fallTasks.Add(view.Animator.AnimateFall(BuildWorldPath(move.Path)));
+                    if (_fruitView.TryGetValue(move.From, out var view))
+                    {
+                        _fruitView.Remove(move.From);
+                        _fruitView[move.To] = view;
+                        allFallTasks.Add(view.Animator.AnimateFall(BuildWorldPath(move.Path)));
+                    }
                 }
             }
-            await UniTask.WhenAll(fallTasks);
 
-            var byColumn = new Dictionary<int, List<FruitMovement>>();
-            foreach (var move in movements)
+            var byColumn = movements
+                .Where(m => m.From.y >= _matchBoard.CurrentBoard.Height)
+                .GroupBy(m => m.From.x)
+                .ToList();
+
+            foreach (var column in byColumn)
             {
-                if (move.From.y < _matchBoard.CurrentBoard.Height) continue;
-
-                if (!byColumn.ContainsKey(move.From.x))
-                    byColumn[move.From.x] = new List<FruitMovement>();
-                byColumn[move.From.x].Add(move);
+                var sortedColumn = column.OrderBy(m => m.To.y).ToList();
+                allFallTasks.Add(SpawnColumnSequential(sortedColumn));
             }
 
-            foreach (var column in byColumn.Values)
-                column.Sort((a, b) => a.To.y.CompareTo(b.To.y));
-
-            var columnTasks = new List<UniTask>();
-            foreach (var column in byColumn.Values)
-                columnTasks.Add(SpawnColumnSequential(column));
-
-            await UniTask.WhenAll(columnTasks);
+            await UniTask.WhenAll(allFallTasks);
+            await UniTask.Delay(100);
         }
 
         // ── Helpers ───────────────────────────────────────────
@@ -192,27 +177,23 @@ namespace Presentation.Views
 
         private async UniTask SpawnColumnSequential(List<FruitMovement> column)
         {
+            var tasks = new List<UniTask>();
             foreach (var move in column)
             {
-                Fruit fruit;
-
-                if (move.SyncFruitType >= 0)
-                {
-                    fruit = new Fruit((FruitType)move.SyncFruitType);
-                }
-                else
-                {
-                    fruit = _matchBoard.CurrentBoard.GetCell(move.To.x, move.To.y).Fruit;
-                }
+                Fruit fruit = move.SyncFruitType >= 0
+                    ? new Fruit((FruitType)move.SyncFruitType)
+                    : _matchBoard.CurrentBoard.GetCell(move.To.x, move.To.y).Fruit;
 
                 if (fruit == null) continue;
 
                 var view = SpawnFruitView(move.To, fruit);
                 view.transform.position = _viewUtils.GridToWorld(move.From);
 
-                view.Animator.AnimateFall(BuildWorldPath(move.Path)).Forget();
-                await UniTask.Delay(50);
+                tasks.Add(view.Animator.AnimateFall(BuildWorldPath(move.Path)));
+
+                await UniTask.Delay(60);
             }
+            await UniTask.WhenAll(tasks);
         }
 
         private async UniTask AnimateAndReturn(FruitView view)

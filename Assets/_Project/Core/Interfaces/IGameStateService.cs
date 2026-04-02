@@ -9,9 +9,12 @@ namespace Core.Interfaces
         PlayerData LocalPlayer { get; }
 
         event Action<GamePhase> OnPhaseChanged;
+        event Action OnDataUpdated;
 
         void SetPhase(GamePhase phase);
+        PlayerData GetPlayerData(string playerId);
         void UpdateScore(string playerId, int delta);
+        void UpdateMoves(string playerId, int moves);
         void SetLocalPlayer(string playerId, string playerName);
     }
 }

@@ -18,8 +18,11 @@ namespace Data.Services
         private readonly IGameStateService _gameState;
         private readonly NetworkGameManager _network;
 
-        private ulong _currentTurnPlayerId;
-        private ulong _localPlayerId => NetworkManager.Singleton.LocalClientId;
+        private int _hostMoves = 20;
+        private int _clientMoves = 20;
+        private Dictionary<string, int> _playerScores = new();
+        private string _currentTurnPlayerId;
+        private string _localPlayerId => NetworkManager.Singleton.LocalClientId.ToString();
 
         public HostGameController(IMatchBoard matchBoard, IBoardFactory boardFactory, IBoardView boardView, PreviewManager previewManager, IGameStateService gameState, NetworkGameManager network)
         {
@@ -35,7 +38,6 @@ namespace Data.Services
         public async UniTask StartGame()
         {
             _gameState.SetPhase(GamePhase.Lobby);
-
             await WaitForPlayersAsync();
 
             int seed = UnityEngine.Random.Range(0, int.MaxValue);
@@ -49,7 +51,7 @@ namespace Data.Services
             _currentTurnPlayerId = _localPlayerId;
             _network.BroadcastTurnClientRpc(_currentTurnPlayerId);
 
-            await ProcessBoard();
+            await ProcessAndBroadcast(isInitialProcess: true);
 
             _gameState.SetPhase(GamePhase.Playing);
         }
@@ -78,7 +80,7 @@ namespace Data.Services
             SwitchTurn();
         }
 
-        private void OnMoveReceived(Vector2Int from, Vector2Int to, ulong senderId)
+        private void OnMoveReceived(Vector2Int from, Vector2Int to, string senderId)
         {
             if (_currentTurnPlayerId != senderId) return;
             HandleRemoteMove(from, to).Forget();
@@ -96,16 +98,27 @@ namespace Data.Services
             SwitchTurn();
         }
 
-        private async UniTask ProcessAndBroadcast()
+        private async UniTask ProcessAndBroadcast(bool isInitialProcess = false)
         {
             _gameState.SetPhase(GamePhase.Processing);
 
+            int currentCombo = 1;
+            int totalTurnScore = 0;
             var matches = _matchBoard.FindMatches();
+
             while (matches.Count > 0)
             {
                 var destroyed = matches.SelectMany(m => m.MatchedPositions).Distinct().ToList();
 
-                _matchBoard.ProcessMatches(matches);
+                _matchBoard.ProcessMatches(matches, currentCombo);
+
+                if (!isInitialProcess)
+                {
+                    int currentStepScore = matches.Sum(m => m.Score);
+                    totalTurnScore += currentStepScore;
+                    _gameState.UpdateScore(_currentTurnPlayerId, currentStepScore);
+                }
+
                 var movements = _matchBoard.ApplyGravity();
 
                 _network.BroadcastMatchesClientRpc(destroyed.ToArray());
@@ -114,16 +127,45 @@ namespace Data.Services
                 await _boardView.PlayDestroy(destroyed);
                 await _boardView.PlayGravity(movements, 0);
 
+                currentCombo++;
                 matches = _matchBoard.FindMatches();
             }
 
+            if (isInitialProcess)
+            {
+                _gameState.SetPhase(GamePhase.Playing);
+                return;
+            }
+
             _gameState.SetPhase(GamePhase.Playing);
+
+            if (!_playerScores.ContainsKey(_currentTurnPlayerId))
+                _playerScores[_currentTurnPlayerId] = 0;
+
+            _playerScores[_currentTurnPlayerId] += totalTurnScore;
+
+            if (_currentTurnPlayerId == _localPlayerId)
+                _hostMoves--;
+            else
+                _clientMoves--;
+
+            int currentMoves = (_currentTurnPlayerId == _localPlayerId) ? _hostMoves : _clientMoves;
+
+            _network.UpdatePlayerStatsClientRpc(_currentTurnPlayerId, _playerScores[_currentTurnPlayerId], currentMoves);
+
+            _gameState.UpdateScore(_currentTurnPlayerId, _playerScores[_currentTurnPlayerId]);
+            _gameState.UpdateMoves(_currentTurnPlayerId, currentMoves);
         }
 
         private void SwitchTurn()
         {
             var clients = NetworkManager.Singleton.ConnectedClients.Keys.ToList();
-            _currentTurnPlayerId = clients.First(id => id != _currentTurnPlayerId);
+            ulong nextTurnId = clients.First(id => id.ToString() != _currentTurnPlayerId);
+            _currentTurnPlayerId = nextTurnId.ToString();
+
+            bool isMyTurn = _currentTurnPlayerId == _localPlayerId;
+            _gameState.SetPhase(isMyTurn ? GamePhase.Playing : GamePhase.Paused);
+
             _network.BroadcastTurnClientRpc(_currentTurnPlayerId);
         }
 
@@ -135,7 +177,5 @@ namespace Data.Services
                 Path = m.Path.ToArray(),
                 NewFruitType = m.SyncFruitType
             }).ToArray();
-
-        public async UniTask ProcessBoard() => await ProcessAndBroadcast();
     }
 }

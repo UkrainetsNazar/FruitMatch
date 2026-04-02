@@ -13,26 +13,17 @@ namespace Presentation.Animations
         {
             if (worldPath.Count == 0) return;
 
-            if (worldPath.Count == 1)
-            {
-                await transform.DOMove(worldPath[0], _stepDuration)
-                    .SetEase(Ease.OutBounce)
-                    .AsyncWaitForCompletion();
-                return;
-            }
-
             var sequence = DOTween.Sequence();
 
             for (int i = 0; i < worldPath.Count; i++)
             {
-                float ease_duration = _stepDuration;
+                bool isLastStep = (i == worldPath.Count - 1);
 
-                Ease easeType = i == worldPath.Count - 1
-                    ? Ease.OutBounce
-                    : Ease.InQuad;
+                float duration = isLastStep ? _stepDuration * 1.5f : _stepDuration;
+                Ease easeType = isLastStep ? Ease.OutBounce : Ease.Linear;
 
                 sequence.Append(
-                    transform.DOMove(new Vector3(worldPath[i].x, worldPath[i].y, 0f), ease_duration)
+                    transform.DOMove(new Vector3(worldPath[i].x, worldPath[i].y, 0f), duration)
                         .SetEase(easeType)
                 );
             }

@@ -27,15 +27,14 @@ public class PreviewManager
 
     public async Task StartPreview(Vector2Int from, Vector2Int to)
     {
-        if (_isAnimating) return; // Блокуємо, якщо анімація ще йде
+        if (_isAnimating) return;
 
-        // Якщо прев'ю вже активне для ЦИХ ЖЕ клітин — нічого не робимо
         if (_isPreviewActive && _previewFrom == from && _previewTo == to) return;
 
         _isAnimating = true;
 
         if (_isPreviewActive)
-            await ResetPreviewInternal(); // Використовуємо внутрішній метод без скидання прапорця
+            await ResetPreviewInternal();
 
         _previewFrom = from;
         _previewTo = to;

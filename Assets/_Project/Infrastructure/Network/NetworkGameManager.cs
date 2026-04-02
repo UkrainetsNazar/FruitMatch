@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using Core.Domain;
 using Unity.Netcode;
 using UnityEngine;
@@ -9,13 +8,14 @@ namespace Infrastructure.Network
 {
     public class NetworkGameManager : NetworkBehaviour
     {
-        public event Action<Vector2Int, Vector2Int, ulong> OnMoveReceived;
+        public event Action<Vector2Int, Vector2Int, string> OnMoveReceived;
         public event Action<List<Vector2Int>> OnMatchesProcessed;
         public event Action<List<FruitMovement>> OnGravityApplied;
-        public event Action<ulong> OnTurnChanged;
+        public event Action<string> OnTurnChanged;
         public event Action OnGameStarted;
         public event Action<int, int> OnBoardDataReceived;
         public event Action<Vector2Int, Vector2Int> OnSwapReceived;
+        public event Action<string, int, int> OnStatsReceived;
 
 
         // ── Клієнт → Хост ────────────────────────────────────
@@ -24,7 +24,7 @@ namespace Infrastructure.Network
         public void SendMoveServerRpc(
             Vector2Int from,
             Vector2Int to,
-            ulong senderId)
+            string senderId)
         {
             OnMoveReceived?.Invoke(from, to, senderId);
         }
@@ -53,19 +53,8 @@ namespace Infrastructure.Network
             OnGravityApplied?.Invoke(list);
         }
 
-        private List<Vector2Int> BuildPath(Vector2Int from, Vector2Int to)
-        {
-            var path = new List<Vector2Int> { from };
-
-            int step = to.y < from.y ? -1 : 1;
-            for (int y = from.y + step; y != to.y + step; y += step)
-                path.Add(new Vector2Int(to.x, y));
-
-            return path;
-        }
-
         [ClientRpc]
-        public void BroadcastTurnClientRpc(ulong playerId)
+        public void BroadcastTurnClientRpc(string playerId)
         {
             OnTurnChanged?.Invoke(playerId);
         }
@@ -74,6 +63,7 @@ namespace Infrastructure.Network
         public void BroadcastGameStartedClientRpc()
         {
             OnGameStarted?.Invoke();
+
         }
 
         [ClientRpc]
@@ -88,6 +78,11 @@ namespace Infrastructure.Network
             OnSwapReceived?.Invoke(from, to);
         }
 
+        [ClientRpc]
+        public void UpdatePlayerStatsClientRpc(string playerId, int score, int moves)
+        {
+            OnStatsReceived?.Invoke(playerId, score, moves);
+        }
     }
 
     public struct FruitMovementData : INetworkSerializable

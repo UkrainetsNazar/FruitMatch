@@ -49,13 +49,19 @@ namespace Data.Services
             return _matchFinder.FindMatches(_board);
         }
 
-        public void ProcessMatches(List<MatchResult> matches)
+        public void ProcessMatches(List<MatchResult> matches, int comboMultiplier)
         {
             var toDestroy = new HashSet<Vector2Int>();
 
             foreach (var match in matches)
+            {
+                match.ComboMultiplier = comboMultiplier;
+                
+                match.Score = match.MatchedPositions.Count * 10 * comboMultiplier;
+
                 foreach (var pos in match.MatchedPositions)
                     toDestroy.Add(pos);
+            }
 
             foreach (var pos in toDestroy)
             {

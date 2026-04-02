@@ -6,7 +6,6 @@ namespace Core.Domain
     {
         public Guid Id { get; private set; } = Guid.NewGuid();
         public FruitType Type { get; private set; }
-        public bool IsMatched  { get; set; }
 
         public Fruit(FruitType type)
         {

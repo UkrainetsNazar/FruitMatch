@@ -13,7 +13,7 @@ namespace Core.Interfaces
         void Initialize(Board board);
         bool TrySwap(Vector2Int from, Vector2Int to);
         List<MatchResult> FindMatches();
-        void ProcessMatches(List<MatchResult> matches);
+        void ProcessMatches(List<MatchResult> matches, int comboMultiplier);
         List<FruitMovement> ApplyGravity();
         List<FruitMovement> ApplyGravityWithTypes(Queue<FruitType> syncedTypes);
         bool HasFruitAt(Vector2Int pos);

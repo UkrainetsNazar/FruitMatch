@@ -25,7 +25,7 @@ namespace Data.Services
         private readonly Queue<Func<UniTask>> _animationQueue = new();
         private bool _isProcessingQueue;
 
-        private ulong _localPlayerId => NetworkManager.Singleton.LocalClientId;
+        private string _localPlayerId => NetworkManager.Singleton.LocalClientId.ToString();
 
         public ClientGameController(IMatchBoard matchBoard, IBoardFactory boardFactory, IBoardView boardView, PreviewManager previewManager, IGameStateService gameState, NetworkGameManager network)
         {
@@ -52,13 +52,12 @@ namespace Data.Services
 
         private void OnBoardDataReceived(int shapeIndex, int seed)
         {
-            Debug.Log($"Client: Отримано дані дошки. Seed: {seed}");
-            UnityEngine.Random.InitState(seed);
-
-            _animationQueue.Clear();
-            _isProcessingQueue = false;
-
-            _boardFactory.CreateRandom();
+            Enqueue(async () =>
+            {
+                UnityEngine.Random.InitState(seed);
+                _boardFactory.CreateRandom();
+                await UniTask.Yield();
+            });
         }
 
         public async UniTask StartGame() { _gameState.SetPhase(GamePhase.Lobby); await UniTask.CompletedTask; }
@@ -109,7 +108,5 @@ namespace Data.Services
             }
             _isProcessingQueue = false;
         }
-
-        public UniTask ProcessBoard() => UniTask.CompletedTask;
     }
 }
