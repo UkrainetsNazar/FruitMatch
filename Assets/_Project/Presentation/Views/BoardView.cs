@@ -26,6 +26,8 @@ namespace Presentation.Views
         private Dictionary<Vector2Int, FruitView> _fruitView = new();
         private BoardViewUtils _viewUtils;
 
+        public bool IsInitialized => _viewUtils != null;
+
         void Start()
         {
             _matchBoard.OnBoardInitialized += BuildBoard;

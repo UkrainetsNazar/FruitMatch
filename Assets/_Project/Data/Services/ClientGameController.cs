@@ -37,7 +37,12 @@ namespace Data.Services
             _network = network;
 
             _network.OnBoardDataReceived += OnBoardDataReceived;
-            _network.OnGameStarted += () => Debug.Log("Game Started on Client");
+
+            _network.OnStatsReceived += (playerId, score, moves) =>
+            {
+                _gameState.UpdateScore(playerId, score);
+                _gameState.UpdateMoves(playerId, moves);
+            };
 
             _network.OnTurnChanged += id =>
             {
@@ -52,12 +57,14 @@ namespace Data.Services
 
         private void OnBoardDataReceived(int shapeIndex, int seed)
         {
-            Enqueue(async () =>
-            {
-                UnityEngine.Random.InitState(seed);
-                _boardFactory.CreateRandom();
-                await UniTask.Yield();
-            });
+            InitializeBoardAsync(seed).Forget();
+        }
+
+        private async UniTaskVoid InitializeBoardAsync(int seed)
+        {
+            UnityEngine.Random.InitState(seed);
+            _boardFactory.CreateRandom();
+            await UniTask.Yield();
         }
 
         public async UniTask StartGame() { _gameState.SetPhase(GamePhase.Lobby); await UniTask.CompletedTask; }
@@ -100,12 +107,16 @@ namespace Data.Services
 
         private async UniTaskVoid ProcessQueue()
         {
+            if (_isProcessingQueue) return;
             _isProcessingQueue = true;
+
             while (_animationQueue.Count > 0)
             {
+                await UniTask.WaitUntil(() => _boardView.IsInitialized);
                 var next = _animationQueue.Dequeue();
                 await next();
             }
+
             _isProcessingQueue = false;
         }
     }

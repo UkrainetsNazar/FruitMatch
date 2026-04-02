@@ -40,10 +40,12 @@ namespace Data.Services
             _gameState.SetPhase(GamePhase.Lobby);
             await WaitForPlayersAsync();
 
-            int seed = UnityEngine.Random.Range(0, int.MaxValue);
-            UnityEngine.Random.InitState(seed);
+            int seed = Random.Range(0, int.MaxValue);
+            Random.InitState(seed);
 
             _boardFactory.CreateRandom(out int shapeIndex);
+
+            await UniTask.WaitUntil(() => _boardView.IsInitialized);
 
             _network.BroadcastBoardDataClientRpc(shapeIndex, seed);
             _network.BroadcastGameStartedClientRpc();

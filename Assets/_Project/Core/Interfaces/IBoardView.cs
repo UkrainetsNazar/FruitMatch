@@ -8,6 +8,8 @@ namespace Core.Interfaces
 {
     public interface IBoardView
     {
+        bool IsInitialized { get; }
+        
         UniTask PlaySwap(Vector2Int from, Vector2Int to);
         UniTask PlayDestroy(List<Vector2Int> positions);
         UniTask PlayGravity(List<FruitMovement> movements, int startDelayMs);

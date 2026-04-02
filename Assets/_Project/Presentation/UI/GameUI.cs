@@ -36,16 +36,19 @@ namespace Presentation.UI
 
         protected override void RefreshUI()
         {
-            ulong myIdRaw = NetworkManager.Singleton.LocalClientId;
-            ulong opponentIdRaw = NetworkManager.Singleton.ConnectedClientsIds.FirstOrDefault(id => id != myIdRaw);
+            string myId = NetworkManager.Singleton.LocalClientId.ToString();
 
-            var me = _gameState.GetPlayerData(myIdRaw.ToString());
+            var me = _gameState.GetPlayerData(myId);
             playerScore.text = $"{me.Score}";
             playerMoves.text = $"Moves: {me.MovesLeft}";
 
-            if (opponentIdRaw != 0)
+            var opponentId = NetworkManager.Singleton.ConnectedClientsIds
+                .Select(id => id.ToString())
+                .FirstOrDefault(id => id != myId);
+
+            if (!string.IsNullOrEmpty(opponentId))
             {
-                var op = _gameState.GetPlayerData(opponentIdRaw.ToString());
+                var op = _gameState.GetPlayerData(opponentId);
                 opponentScore.text = $"{op.Score}";
                 opponentMoves.text = $"Moves: {op.MovesLeft}";
             }
