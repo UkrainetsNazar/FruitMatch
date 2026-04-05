@@ -16,6 +16,8 @@ namespace Infrastructure.Network
         public event Action<int, int> OnBoardDataReceived;
         public event Action<Vector2Int, Vector2Int> OnSwapReceived;
         public event Action<string, int, int> OnStatsReceived;
+        public event Action OnClientBoardReady;
+        public event Action OnSwapFailed;
 
 
         // ── Клієнт → Хост ────────────────────────────────────
@@ -27,6 +29,12 @@ namespace Infrastructure.Network
             string senderId)
         {
             OnMoveReceived?.Invoke(from, to, senderId);
+        }
+
+        [ServerRpc(RequireOwnership = false)]
+        public void SendBoardReadyServerRpc(string playerId)
+        {
+            OnClientBoardReady?.Invoke();
         }
 
         // ── Хост → всі клієнти ───────────────────────────────
@@ -76,6 +84,12 @@ namespace Infrastructure.Network
         public void BroadcastSwapClientRpc(Vector2Int from, Vector2Int to)
         {
             OnSwapReceived?.Invoke(from, to);
+        }
+
+        [ClientRpc]
+        public void NotifySwapFailedClientRpc(ClientRpcParams clientRpcParams = default)
+        {
+            OnSwapFailed?.Invoke();
         }
 
         [ClientRpc]

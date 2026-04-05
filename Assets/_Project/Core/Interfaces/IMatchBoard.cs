@@ -10,7 +10,7 @@ namespace Core.Interfaces
         Board CurrentBoard { get; }
         event Action OnBoardInitialized;
         
-        void Initialize(Board board);
+        void Initialize(Board board, int seed);
         bool TrySwap(Vector2Int from, Vector2Int to);
         List<MatchResult> FindMatches();
         void ProcessMatches(List<MatchResult> matches, int comboMultiplier);

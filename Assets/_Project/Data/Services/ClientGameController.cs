@@ -51,35 +51,41 @@ namespace Data.Services
             };
 
             _network.OnSwapReceived += OnSwapReceived;
+            _network.OnSwapFailed += () =>
+            {
+                _isLocalPredicting = false;
+                _previewManager.ResetPreview().Forget();
+            };
             _network.OnMatchesProcessed += destroyed => Enqueue(() => _boardView.PlayDestroy(destroyed));
             _network.OnGravityApplied += movements => Enqueue(() => _boardView.PlayGravity(movements, 0));
         }
 
         private void OnBoardDataReceived(int shapeIndex, int seed)
         {
-            InitializeBoardAsync(seed).Forget();
+            if (NetworkManager.Singleton.IsHost) return;
+            InitializeBoardAsync(shapeIndex, seed).Forget();
         }
 
-        private async UniTaskVoid InitializeBoardAsync(int seed)
+        private async UniTaskVoid InitializeBoardAsync(int shapeIndex, int seed)
         {
-            UnityEngine.Random.InitState(seed);
-            _boardFactory.CreateRandom();
-            await UniTask.Yield();
+            _boardFactory.CreateByShape(shapeIndex, seed);
+            await UniTask.WaitUntil(() => _boardView.IsInitialized);
+            _network.SendBoardReadyServerRpc(_localPlayerId);
         }
 
         public async UniTask StartGame() { _gameState.SetPhase(GamePhase.Lobby); await UniTask.CompletedTask; }
 
         public UniTask OnPlayerSwap(Vector2Int from, Vector2Int to)
         {
-            if (!_isMyTurn || _isProcessingQueue) return UniTask.CompletedTask;
-
-            if (!_matchBoard.TrySwap(from, to)) return UniTask.CompletedTask;
+            if (!_isMyTurn || _isProcessingQueue)
+                return UniTask.CompletedTask;
 
             _isLocalPredicting = true;
             _pendingFrom = from;
             _pendingTo = to;
 
             _network.SendMoveServerRpc(from, to, _localPlayerId);
+
             return UniTask.CompletedTask;
         }
 
@@ -94,7 +100,6 @@ namespace Data.Services
                     return;
                 }
 
-                _matchBoard.TrySwap(from, to);
                 await _boardView.PlaySwap(from, to);
             });
         }

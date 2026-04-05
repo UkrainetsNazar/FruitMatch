@@ -20,6 +20,7 @@ namespace Data.Services
 
         private int _hostMoves = 20;
         private int _clientMoves = 20;
+        private bool _clientBoardReady = false;
         private Dictionary<string, int> _playerScores = new();
         private string _currentTurnPlayerId;
         private string _localPlayerId => NetworkManager.Singleton.LocalClientId.ToString();
@@ -32,7 +33,9 @@ namespace Data.Services
             _previewManager = previewManager;
             _gameState = gameState;
             _network = network;
+
             _network.OnMoveReceived += OnMoveReceived;
+            _network.OnClientBoardReady += () => _clientBoardReady = true;
         }
 
         public async UniTask StartGame()
@@ -40,15 +43,23 @@ namespace Data.Services
             _gameState.SetPhase(GamePhase.Lobby);
             await WaitForPlayersAsync();
 
-            int seed = Random.Range(0, int.MaxValue);
-            Random.InitState(seed);
+            foreach (var client in NetworkManager.Singleton.ConnectedClients)
+            {
+                string id = client.Key.ToString();
+                _playerScores[id] = 0;
+                _gameState.UpdateScore(id, 0);
+                _gameState.UpdateMoves(id, 20);
+                _network.UpdatePlayerStatsClientRpc(id, 0, 20);
+            }
 
-            _boardFactory.CreateRandom(out int shapeIndex);
+            _boardFactory.CreateRandom(out int shapeIndex, out int seed);
 
             await UniTask.WaitUntil(() => _boardView.IsInitialized);
 
             _network.BroadcastBoardDataClientRpc(shapeIndex, seed);
             _network.BroadcastGameStartedClientRpc();
+
+            await UniTask.WaitUntil(() => _clientBoardReady);
 
             _currentTurnPlayerId = _localPlayerId;
             _network.BroadcastTurnClientRpc(_currentTurnPlayerId);
@@ -85,17 +96,23 @@ namespace Data.Services
         private void OnMoveReceived(Vector2Int from, Vector2Int to, string senderId)
         {
             if (_currentTurnPlayerId != senderId) return;
-            HandleRemoteMove(from, to).Forget();
+            HandleRemoteMove(from, to, senderId).Forget();
         }
 
-        private async UniTaskVoid HandleRemoteMove(Vector2Int from, Vector2Int to)
+        private async UniTaskVoid HandleRemoteMove(Vector2Int from, Vector2Int to, string senderId)
         {
-            if (!_matchBoard.TrySwap(from, to)) return;
+            if (!_matchBoard.TrySwap(from, to))
+            {
+                ClientRpcParams rpcParams = new()
+                {
+                    Send = new ClientRpcSendParams { TargetClientIds = new[] { ulong.Parse(senderId) } }
+                };
+                _network.NotifySwapFailedClientRpc(rpcParams);
+                return;
+            }
 
             _network.BroadcastSwapClientRpc(from, to);
-
             await _boardView.PlaySwap(from, to);
-
             await ProcessAndBroadcast();
             SwitchTurn();
         }

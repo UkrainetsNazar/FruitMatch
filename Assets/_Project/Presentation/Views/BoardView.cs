@@ -28,9 +28,15 @@ namespace Presentation.Views
 
         public bool IsInitialized => _viewUtils != null;
 
-        void Start()
+        void Awake()
         {
             _matchBoard.OnBoardInitialized += BuildBoard;
+        }
+
+        void Start()
+        {
+            if (_matchBoard.CurrentBoard != null && _viewUtils == null)
+                BuildBoard();
         }
 
         void OnDestroy()

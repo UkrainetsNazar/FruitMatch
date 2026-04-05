@@ -15,14 +15,21 @@ namespace Presentation.UI
         [SerializeField] private TMP_Text opponentScore, opponentMoves;
         [InjectOptional] private NetworkGameManager _network;
 
+        void Awake()
+        {
+            if (_network != null)
+            {
+                _network.OnGameStarted += OnGameStarted;
+                _network.OnTurnChanged += UpdateTurnDisplay;
+            }
+        }
+
         protected override void Start()
         {
             if (_network != null)
             {
                 base.Start();
                 if (onlineGamePanel != null) onlineGamePanel.SetActive(true);
-                _network.OnGameStarted += OnGameStarted;
-                _network.OnTurnChanged += UpdateTurnDisplay;
             }
             else enabled = false;
         }

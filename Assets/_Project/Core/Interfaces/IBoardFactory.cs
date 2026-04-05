@@ -5,6 +5,7 @@ namespace Core.Interfaces
     public interface IBoardFactory
     {
         Board CreateRandom();
-        Board CreateRandom(out int shapeIndex);
+        Board CreateByShape(int shapeIndex, int seed);
+        Board CreateRandom(out int shapeIndex, out int seed);
     }
 }

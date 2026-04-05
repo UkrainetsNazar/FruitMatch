@@ -25,21 +25,18 @@ namespace Data.Services
             _gravityProcessor = new GravityProcessor(fruitFactory);
         }
 
-        public void Initialize(Board board)
+        public void Initialize(Board board, int seed)
         {
             _board = board;
+            UnityEngine.Random.InitState(seed);
 
             for (int x = 0; x < _board.Width; x++)
-            {
                 for (int y = 0; y < _board.Height; y++)
                 {
                     Cell cell = _board.GetCell(x, y);
                     if (cell.IsUsable)
-                    {
                         cell.Fruit = _fruitFactory.CreateRandom();
-                    }
                 }
-            }
 
             OnBoardInitialized?.Invoke();
         }
@@ -56,7 +53,7 @@ namespace Data.Services
             foreach (var match in matches)
             {
                 match.ComboMultiplier = comboMultiplier;
-                
+
                 match.Score = match.MatchedPositions.Count * 10 * comboMultiplier;
 
                 foreach (var pos in match.MatchedPositions)
