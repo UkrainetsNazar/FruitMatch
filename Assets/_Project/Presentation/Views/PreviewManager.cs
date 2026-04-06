@@ -25,7 +25,7 @@ public class PreviewManager
         _viewUtils = viewUtils;
     }
 
-    public async Task StartPreview(Vector2Int from, Vector2Int to)
+    public async UniTask StartPreview(Vector2Int from, Vector2Int to)
     {
         if (_isAnimating) return;
 
@@ -80,17 +80,12 @@ public class PreviewManager
         }
     }
 
-    public async UniTask ConfirmPreview()
+    public UniTask ConfirmPreview()
     {
-        if (!_isPreviewActive) return;
-
-        await UniTask.WaitUntil(() => !_isAnimating);
-
-        _isAnimating = true;
+        if (!_isPreviewActive) return UniTask.CompletedTask;
         _boardView.SwapFruitViewKeys(_previewFrom, _previewTo);
-
         _isPreviewActive = false;
-        _isAnimating = false;
+        return UniTask.CompletedTask;
     }
 
     public bool IsPreviewActive => _isPreviewActive;

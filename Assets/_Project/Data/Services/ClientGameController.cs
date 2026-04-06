@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
 using Infrastructure.Network;
+using Presentation.Views;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -10,12 +11,12 @@ namespace Data.Services
 {
     public class ClientGameController : IGameController
     {
-        private readonly IMatchBoard _matchBoard;
         private readonly IBoardView _boardView;
         private readonly IBoardFactory _boardFactory;
         private readonly PreviewManager _previewManager;
         private readonly IGameStateService _gameState;
         private readonly NetworkGameManager _network;
+        private readonly HintSystem _hint;
 
         private bool _isMyTurn;
         private bool _isLocalPredicting;
@@ -27,14 +28,15 @@ namespace Data.Services
 
         private string _localPlayerId => NetworkManager.Singleton.LocalClientId.ToString();
 
-        public ClientGameController(IMatchBoard matchBoard, IBoardFactory boardFactory, IBoardView boardView, PreviewManager previewManager, IGameStateService gameState, NetworkGameManager network)
+        public ClientGameController(IBoardFactory boardFactory, IBoardView boardView, PreviewManager previewManager, IGameStateService gameState, NetworkGameManager network)
         {
-            _matchBoard = matchBoard;
             _boardFactory = boardFactory;
             _boardView = boardView;
             _previewManager = previewManager;
             _gameState = gameState;
             _network = network;
+
+            _hint = new HintSystem(_boardView);
 
             _network.OnBoardDataReceived += OnBoardDataReceived;
 
@@ -44,11 +46,17 @@ namespace Data.Services
                 _gameState.UpdateMoves(playerId, moves);
             };
 
-            _network.OnTurnChanged += id =>
+            _network.OnTurnChanged += (id, hintFrom, hintTo) =>
             {
                 _isMyTurn = id == _localPlayerId;
                 _gameState.SetPhase(_isMyTurn ? GamePhase.Playing : GamePhase.Paused);
+
+                if (_isMyTurn) _hint.OnTurnStarted(hintFrom, hintTo);
+                else _hint.OnTurnEnded();
             };
+
+            _network.OnShuffleReceived += movements =>
+                Enqueue(() => _boardView.PlayShuffle(movements));
 
             _network.OnSwapReceived += OnSwapReceived;
             _network.OnSwapFailed += () =>
@@ -79,6 +87,8 @@ namespace Data.Services
         {
             if (!_isMyTurn || _isProcessingQueue)
                 return UniTask.CompletedTask;
+
+            _hint.OnPlayerActed();
 
             _isLocalPredicting = true;
             _pendingFrom = from;

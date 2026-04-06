@@ -78,6 +78,62 @@ namespace Data.Services
             return _gravityProcessor.Apply(_board, () => syncedTypes.Dequeue());
         }
 
+        public int[] ShuffleBoard()
+        {
+            for (int x = 0; x < _board.Width; x++)
+                for (int y = 0; y < _board.Height; y++)
+                {
+                    var cell = _board.GetCell(x, y);
+                    if (cell.IsUsable) cell.Fruit = null;
+                }
+
+            for (int x = 0; x < _board.Width; x++)
+                for (int y = 0; y < _board.Height; y++)
+                {
+                    var cell = _board.GetCell(x, y);
+                    if (cell.IsUsable) cell.Fruit = _fruitFactory.CreateRandom();
+                }
+
+            var usable = new List<int>();
+            for (int x = 0; x < _board.Width; x++)
+                for (int y = 0; y < _board.Height; y++)
+                {
+                    var cell = _board.GetCell(x, y);
+                    if (cell.IsUsable) usable.Add((int)cell.Fruit.Type);
+                }
+            return usable.ToArray();
+        }
+
+        public List<FruitMovement> BuildSpawnMovements()
+        {
+            var movements = new List<FruitMovement>();
+
+            for (int x = 0; x < _board.Width; x++)
+            {
+                int spawnOffset = 0;
+                for (int y = 0; y < _board.Height; y++)
+                {
+                    var cell = _board.GetCell(x, y);
+                    if (!cell.IsUsable || cell.Fruit == null) continue;
+
+                    var spawnPoint = new Vector2Int(x, _board.Height + spawnOffset);
+                    var target = new Vector2Int(x, y);
+
+                    movements.Add(new FruitMovement
+                    {
+                        From = spawnPoint,
+                        To = target,
+                        Path = new List<Vector2Int> { spawnPoint, target },
+                        SyncFruitType = (int)cell.Fruit.Type
+                    });
+
+                    spawnOffset++;
+                }
+            }
+
+            return movements;
+        }
+
         public bool TrySwap(Vector2Int from, Vector2Int to)
         {
             if (!_board.IsValid(from) || !_board.IsValid(to)) return false;
@@ -118,5 +174,9 @@ namespace Data.Services
             return (Mathf.Abs(diff.x) == 1 && diff.y == 0) ||
                    (Mathf.Abs(diff.y) == 1 && diff.x == 0);
         }
+
+        public bool HasAnyValidMove() => _matchFinder.HasAnyValidMove(_board);
+
+        public (Vector2Int, Vector2Int)? FindHint() => _matchFinder.FindFirstValidMove(_board);
     }
 }

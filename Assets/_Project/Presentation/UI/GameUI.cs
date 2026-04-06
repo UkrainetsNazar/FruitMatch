@@ -20,7 +20,7 @@ namespace Presentation.UI
             if (_network != null)
             {
                 _network.OnGameStarted += OnGameStarted;
-                _network.OnTurnChanged += UpdateTurnDisplay;
+                _network.OnTurnChanged += (id, _, _) => UpdateTurnDisplay(id);
             }
         }
 

@@ -16,6 +16,10 @@ namespace Core.Interfaces
         void ProcessMatches(List<MatchResult> matches, int comboMultiplier);
         List<FruitMovement> ApplyGravity();
         List<FruitMovement> ApplyGravityWithTypes(Queue<FruitType> syncedTypes);
+        List<FruitMovement> BuildSpawnMovements();
+        int[] ShuffleBoard();
+        (Vector2Int, Vector2Int)? FindHint();
         bool HasFruitAt(Vector2Int pos);
+        bool HasAnyValidMove();
     }
 }

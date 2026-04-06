@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Core.Domain;
 using Unity.Netcode;
 using UnityEngine;
@@ -11,14 +12,14 @@ namespace Infrastructure.Network
         public event Action<Vector2Int, Vector2Int, string> OnMoveReceived;
         public event Action<List<Vector2Int>> OnMatchesProcessed;
         public event Action<List<FruitMovement>> OnGravityApplied;
-        public event Action<string> OnTurnChanged;
+        public event Action<string, Vector2Int, Vector2Int> OnTurnChanged;
         public event Action OnGameStarted;
         public event Action<int, int> OnBoardDataReceived;
         public event Action<Vector2Int, Vector2Int> OnSwapReceived;
         public event Action<string, int, int> OnStatsReceived;
         public event Action OnClientBoardReady;
         public event Action OnSwapFailed;
-
+        public event Action<List<FruitMovement>> OnShuffleReceived;
 
         // ── Клієнт → Хост ────────────────────────────────────
 
@@ -46,25 +47,13 @@ namespace Infrastructure.Network
         }
 
         [ClientRpc]
-        public void BroadcastGravityClientRpc(FruitMovementData[] movements)
-        {
-            var list = new List<FruitMovement>();
-            foreach (var m in movements)
-                list.Add(new FruitMovement
-                {
-                    From = m.From,
-                    To = m.To,
-                    Path = new List<Vector2Int>(m.Path),
-                    SyncFruitType = m.NewFruitType
-                });
-
-            OnGravityApplied?.Invoke(list);
-        }
+        public void BroadcastGravityClientRpc(FruitMovementData[] movements) =>
+            OnGravityApplied?.Invoke(ToMovementList(movements));
 
         [ClientRpc]
-        public void BroadcastTurnClientRpc(string playerId)
+        public void BroadcastTurnClientRpc(string playerId, Vector2Int hintFrom, Vector2Int hintTo)
         {
-            OnTurnChanged?.Invoke(playerId);
+            OnTurnChanged?.Invoke(playerId, hintFrom, hintTo);
         }
 
         [ClientRpc]
@@ -97,6 +86,19 @@ namespace Infrastructure.Network
         {
             OnStatsReceived?.Invoke(playerId, score, moves);
         }
+
+        [ClientRpc]
+        public void BroadcastShuffleClientRpc(FruitMovementData[] movements) =>
+            OnShuffleReceived?.Invoke(ToMovementList(movements));
+
+        private static List<FruitMovement> ToMovementList(FruitMovementData[] data) =>
+        data.Select(m => new FruitMovement
+        {
+            From = m.From,
+            To = m.To,
+            Path = new List<Vector2Int>(m.Path),
+            SyncFruitType = m.NewFruitType
+        }).ToList();
     }
 
     public struct FruitMovementData : INetworkSerializable

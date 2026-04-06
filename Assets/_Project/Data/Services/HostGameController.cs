@@ -4,6 +4,7 @@ using Core.Domain;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
 using Infrastructure.Network;
+using Presentation.Views;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -17,6 +18,7 @@ namespace Data.Services
         private readonly PreviewManager _previewManager;
         private readonly IGameStateService _gameState;
         private readonly NetworkGameManager _network;
+        private readonly HintSystem _hint;
 
         private int _hostMoves = 20;
         private int _clientMoves = 20;
@@ -33,6 +35,8 @@ namespace Data.Services
             _previewManager = previewManager;
             _gameState = gameState;
             _network = network;
+
+            _hint = new HintSystem(_boardView);
 
             _network.OnMoveReceived += OnMoveReceived;
             _network.OnClientBoardReady += () => _clientBoardReady = true;
@@ -62,7 +66,7 @@ namespace Data.Services
             await UniTask.WaitUntil(() => _clientBoardReady);
 
             _currentTurnPlayerId = _localPlayerId;
-            _network.BroadcastTurnClientRpc(_currentTurnPlayerId);
+            _network.BroadcastTurnClientRpc(_currentTurnPlayerId, Vector2Int.zero, Vector2Int.zero);
 
             await ProcessAndBroadcast(isInitialProcess: true);
 
@@ -78,6 +82,7 @@ namespace Data.Services
         public async UniTask OnPlayerSwap(Vector2Int from, Vector2Int to)
         {
             if (_currentTurnPlayerId != _localPlayerId) return;
+            _hint.OnPlayerActed();
 
             if (!_matchBoard.TrySwap(from, to))
             {
@@ -119,6 +124,7 @@ namespace Data.Services
 
         private async UniTask ProcessAndBroadcast(bool isInitialProcess = false)
         {
+            _hint.OnTurnEnded();
             _gameState.SetPhase(GamePhase.Processing);
 
             int currentCombo = 1;
@@ -174,6 +180,9 @@ namespace Data.Services
 
             _gameState.UpdateScore(_currentTurnPlayerId, _playerScores[_currentTurnPlayerId]);
             _gameState.UpdateMoves(_currentTurnPlayerId, currentMoves);
+
+            if (!isInitialProcess && !_matchBoard.HasAnyValidMove())
+                await ShuffleAndBroadcast();
         }
 
         private void SwitchTurn()
@@ -185,7 +194,28 @@ namespace Data.Services
             bool isMyTurn = _currentTurnPlayerId == _localPlayerId;
             _gameState.SetPhase(isMyTurn ? GamePhase.Playing : GamePhase.Paused);
 
-            _network.BroadcastTurnClientRpc(_currentTurnPlayerId);
+            var hint = _matchBoard.FindHint();
+            var hintFrom = hint?.Item1 ?? Vector2Int.zero;
+            var hintTo = hint?.Item2 ?? Vector2Int.zero;
+
+            _network.BroadcastTurnClientRpc(_currentTurnPlayerId, hintFrom, hintTo);
+
+            if (isMyTurn) _hint.OnTurnStarted(hintFrom, hintTo);
+            else _hint.OnTurnEnded();
+        }
+
+        private async UniTask ShuffleAndBroadcast()
+        {
+            do { _matchBoard.ShuffleBoard(); }
+            while (!_matchBoard.HasAnyValidMove());
+
+            var movements = _matchBoard.BuildSpawnMovements();
+
+            _network.BroadcastShuffleClientRpc(ToNetworkData(movements));
+
+            await _boardView.PlayShuffle(movements);
+
+            await ProcessAndBroadcast(isInitialProcess: true);
         }
 
         private FruitMovementData[] ToNetworkData(List<FruitMovement> movements) =>

@@ -51,5 +51,12 @@ namespace Presentation.Animations
             transform.localScale = Vector3.one;
             transform.localRotation = Quaternion.identity;
         }
+
+        public void PlayPulse()
+        {
+            transform.DOKill(complete: false);
+            transform.DOPunchScale(Vector3.one * 0.3f, 0.4f, vibrato: 1, elasticity: 0.5f)
+                     .SetEase(Ease.OutQuad);
+        }
     }
 }

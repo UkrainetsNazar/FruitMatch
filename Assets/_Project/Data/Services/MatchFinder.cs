@@ -59,5 +59,64 @@ namespace Data.Services
                 }
             }
         }
+
+        public bool HasAnyValidMove(Board board)
+        {
+            var directions = new[] { Vector2Int.right, Vector2Int.up };
+
+            for (int x = 0; x < board.Width; x++)
+            {
+                for (int y = 0; y < board.Height; y++)
+                {
+                    var pos = new Vector2Int(x, y);
+                    var cell = board.GetCell(x, y);
+                    if (!cell.IsUsable || cell.Fruit == null) continue;
+
+                    foreach (var dir in directions)
+                    {
+                        var neighbour = pos + dir;
+                        if (!board.IsValid(neighbour)) continue;
+                        var nCell = board.GetCell(neighbour.x, neighbour.y);
+                        if (!nCell.IsUsable || nCell.Fruit == null) continue;
+
+                        (cell.Fruit, nCell.Fruit) = (nCell.Fruit, cell.Fruit);
+                        bool hasMatch = FindMatches(board).Count > 0;
+                        (cell.Fruit, nCell.Fruit) = (nCell.Fruit, cell.Fruit);
+
+                        if (hasMatch) return true;
+                    }
+                }
+            }
+            return false;
+        }
+        public (Vector2Int, Vector2Int)? FindFirstValidMove(Board board)
+        {
+            var directions = new[] { Vector2Int.right, Vector2Int.up };
+
+            for (int x = 0; x < board.Width; x++)
+            {
+                for (int y = 0; y < board.Height; y++)
+                {
+                    var pos = new Vector2Int(x, y);
+                    var cell = board.GetCell(x, y);
+                    if (!cell.IsUsable || cell.Fruit == null) continue;
+
+                    foreach (var dir in directions)
+                    {
+                        var neighbour = pos + dir;
+                        if (!board.IsValid(neighbour)) continue;
+                        var nCell = board.GetCell(neighbour.x, neighbour.y);
+                        if (!nCell.IsUsable || nCell.Fruit == null) continue;
+
+                        (cell.Fruit, nCell.Fruit) = (nCell.Fruit, cell.Fruit);
+                        bool hasMatch = FindMatches(board).Count > 0;
+                        (cell.Fruit, nCell.Fruit) = (nCell.Fruit, cell.Fruit);
+
+                        if (hasMatch) return (pos, neighbour);
+                    }
+                }
+            }
+            return null;
+        }
     }
 }
