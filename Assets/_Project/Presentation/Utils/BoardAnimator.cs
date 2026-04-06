@@ -47,7 +47,6 @@ namespace Presentation.Utils
                 tasks.Add(AnimateAndReturn(view));
             }
             await UniTask.WhenAll(tasks);
-            await UniTask.Delay(50);
         }
 
         public async UniTask PlayGravity(List<FruitMovement> movements, int startDelayMs)
@@ -72,7 +71,6 @@ namespace Presentation.Utils
             }
 
             await UniTask.WhenAll(tasks);
-            await UniTask.Delay(100);
         }
 
         public async UniTask PlayShuffle(List<FruitMovement> spawnMovements)

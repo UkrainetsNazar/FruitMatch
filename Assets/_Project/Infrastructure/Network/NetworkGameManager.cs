@@ -20,6 +20,31 @@ namespace Infrastructure.Network
         public event Action OnClientBoardReady;
         public event Action OnSwapFailed;
         public event Action<List<FruitMovement>> OnShuffleReceived;
+        public event Action OnOpponentDisconnected;
+
+        public override void OnNetworkSpawn()
+        {
+            NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnect;
+        }
+
+        public override void OnNetworkDespawn()
+        {
+            NetworkManager.Singleton.OnClientDisconnectCallback -= OnClientDisconnect;
+        }
+
+        private void OnClientDisconnect(ulong clientId)
+        {
+            bool isLocalPlayer = clientId == NetworkManager.Singleton.LocalClientId;
+
+            if (NetworkManager.Singleton.IsHost)
+            {
+                if (!isLocalPlayer) OnOpponentDisconnected?.Invoke();
+            }
+            else
+            {
+                if (isLocalPlayer) OnOpponentDisconnected?.Invoke();
+            }
+        }
 
         // ── Клієнт → Хост ────────────────────────────────────
 

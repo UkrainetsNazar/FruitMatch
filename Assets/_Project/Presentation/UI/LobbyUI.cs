@@ -190,10 +190,10 @@ namespace Presentation.UI
 
             await _networkService.StartHostAsync();
 
-            NetworkManager.Singleton.SceneManager.LoadScene(
-                "Game",
-                LoadSceneMode.Single
-            );
+            await UniTask.WaitUntil(() =>
+                NetworkManager.Singleton.ConnectedClients.Count >= 2);
+
+            NetworkManager.Singleton.SceneManager.LoadScene("Game", LoadSceneMode.Single);
         }
 
         private void OnKickedFromLobby()
