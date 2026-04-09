@@ -181,7 +181,18 @@ namespace Data.Services
             _gameState.UpdateScore(_currentTurnPlayerId, _playerScores[_currentTurnPlayerId]);
             _gameState.UpdateMoves(_currentTurnPlayerId, currentMoves);
 
-            if (!isInitialProcess && !_matchBoard.HasAnyValidMove())
+            if (IsGameOver())
+            {
+                var winnerId = DetermineWinner();
+                _network.BroadcastGameEndedClientRpc(winnerId);
+
+                await UniTask.Delay(500);
+                var me = _gameState.GetPlayerData(_localPlayerId);
+                _gameState.NotifyGameFinished(me.Score);
+                return;
+            }
+
+            if (!_matchBoard.HasAnyValidMove())
                 await ShuffleAndBroadcast();
         }
 
@@ -216,6 +227,24 @@ namespace Data.Services
             await _boardView.PlayShuffle(movements);
 
             await ProcessAndBroadcast(isInitialProcess: true);
+        }
+
+        private bool IsGameOver()
+        {
+            bool hostOut = _hostMoves <= 0;
+            bool clientOut = _clientMoves <= 0;
+            return hostOut || clientOut;
+        }
+
+        private string DetermineWinner()
+        {
+            int hostScore = _playerScores.GetValueOrDefault(_localPlayerId, 0);
+            string clientId = _playerScores.Keys.FirstOrDefault(id => id != _localPlayerId);
+            int clientScore = clientId != null ? _playerScores.GetValueOrDefault(clientId, 0) : 0;
+
+            if (hostScore > clientScore) return _localPlayerId;
+            if (clientScore > hostScore) return clientId;
+            return string.Empty;
         }
 
         private FruitMovementData[] ToNetworkData(List<FruitMovement> movements) =>

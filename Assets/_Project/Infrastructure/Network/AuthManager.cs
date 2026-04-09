@@ -15,15 +15,24 @@ namespace Infrastructure.Network
         {
             try
             {
-                var options = new InitializationOptions();
+                if (UnityServices.State != ServicesInitializationState.Initialized)
+                {
+                    var options = new InitializationOptions();
 
-                #if UNITY_EDITOR
-                options.SetProfile($"Profile_{Guid.NewGuid().ToString()[..8]}");
-                #endif
+                    #if UNITY_EDITOR
+                    options.SetProfile($"Profile_{Guid.NewGuid().ToString()[..8]}");
+                    #endif
 
-                await UnityServices.InitializeAsync(options);
+                    await UnityServices.InitializeAsync(options);
+                }
 
-                AuthenticationService.Instance.SignedIn += OnSignedIn;
+                if (AuthenticationService.Instance.IsSignedIn)
+                {
+                    PlayerId = AuthenticationService.Instance.PlayerId;
+                    return;
+                }
+
+                AuthenticationService.Instance.SignedIn     += OnSignedIn;
                 AuthenticationService.Instance.SignInFailed += OnSignInFailed;
 
                 await AuthenticationService.Instance.SignInAnonymouslyAsync();

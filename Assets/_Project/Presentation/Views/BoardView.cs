@@ -90,8 +90,12 @@ namespace Presentation.Views
         {
             while (!ct.IsCancellationRequested)
             {
-                if (_registry.TryGet(from, out var a)) a.Animator.PlayPulse();
-                if (_registry.TryGet(to, out var b)) b.Animator.PlayPulse();
+                if (_registry.TryGet(from, out var a) && a != null && a.Animator != null)
+                    a.Animator.PlayPulse();
+
+                if (_registry.TryGet(to, out var b) && b != null && b.Animator != null)
+                    b.Animator.PlayPulse();
+
                 await UniTask.Delay(TimeSpan.FromSeconds(1f), cancellationToken: ct)
                              .SuppressCancellationThrow();
             }

@@ -13,6 +13,12 @@ namespace Data.Services
 
         public event Action<GamePhase> OnPhaseChanged;
         public event Action OnDataUpdated;
+        public event Action<int> OnGameFinished;
+
+        public void NotifyGameFinished(int finalScore)
+        {
+            OnGameFinished?.Invoke(finalScore);
+        }
 
         public void UpdateScore(string playerId, int score)
         {

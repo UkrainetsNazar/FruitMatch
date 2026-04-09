@@ -11,6 +11,7 @@ namespace Presentation.Animations
 
         public async UniTask AnimateFall(List<Vector2> worldPath)
         {
+            transform.DOKill();
             if (worldPath.Count == 0) return;
 
             var sequence = DOTween.Sequence();
@@ -33,6 +34,7 @@ namespace Presentation.Animations
 
         public async UniTask AnimateSwap(Vector2 worldPos)
         {
+            transform.DOKill();
             await transform.DOMove(new Vector3(worldPos.x, worldPos.y, 0f), 0.15f)
                 .SetEase(Ease.OutCubic)
                 .AsyncWaitForCompletion();
@@ -40,6 +42,7 @@ namespace Presentation.Animations
 
         public async UniTask AnimateDestroy()
         {
+            transform.DOKill();
             var sequence = DOTween.Sequence();
 
             sequence.Append(transform.DOMove(transform.position + Vector3.up * 0.5f, 0.2f).SetEase(Ease.OutQuad));
@@ -48,6 +51,7 @@ namespace Presentation.Animations
 
             await sequence.AsyncWaitForCompletion();
 
+            transform.localPosition = Vector3.zero;
             transform.localScale = Vector3.one;
             transform.localRotation = Quaternion.identity;
         }

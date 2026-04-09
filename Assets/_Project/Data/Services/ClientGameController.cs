@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Core.Domain;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
 using Infrastructure.Network;
@@ -66,6 +67,15 @@ namespace Data.Services
             };
             _network.OnMatchesProcessed += destroyed => Enqueue(() => _boardView.PlayDestroy(destroyed));
             _network.OnGravityApplied += movements => Enqueue(() => _boardView.PlayGravity(movements, 0));
+
+            _network.OnGameEnded += winnerId =>
+            {
+                string myId = _localPlayerId;
+                bool iWon = winnerId == myId;
+                bool isDraw = string.IsNullOrEmpty(winnerId);
+                var me = _gameState.GetPlayerData(myId);
+                _gameState.NotifyGameFinished(me.Score);
+            };
         }
 
         private void OnBoardDataReceived(int shapeIndex, int seed)

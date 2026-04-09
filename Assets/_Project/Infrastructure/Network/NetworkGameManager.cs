@@ -21,6 +21,7 @@ namespace Infrastructure.Network
         public event Action OnSwapFailed;
         public event Action<List<FruitMovement>> OnShuffleReceived;
         public event Action OnOpponentDisconnected;
+        public event Action<string> OnGameEnded;
 
         public override void OnNetworkSpawn()
         {
@@ -115,6 +116,12 @@ namespace Infrastructure.Network
         [ClientRpc]
         public void BroadcastShuffleClientRpc(FruitMovementData[] movements) =>
             OnShuffleReceived?.Invoke(ToMovementList(movements));
+
+        [ClientRpc]
+        public void BroadcastGameEndedClientRpc(string winnerId)
+        {
+            OnGameEnded?.Invoke(winnerId);
+        }
 
         private static List<FruitMovement> ToMovementList(FruitMovementData[] data) =>
         data.Select(m => new FruitMovement

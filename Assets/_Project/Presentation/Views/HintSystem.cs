@@ -39,7 +39,10 @@ namespace Presentation.Views
         {
             await UniTask.Delay(TimeSpan.FromSeconds(HintDelay), cancellationToken: ct)
                          .SuppressCancellationThrow();
+
             if (ct.IsCancellationRequested) return;
+
+            if (_boardView == null) return;
 
             _boardView.ShowHint(from, to);
         }

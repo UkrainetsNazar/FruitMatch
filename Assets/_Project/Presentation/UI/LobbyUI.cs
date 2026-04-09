@@ -24,6 +24,7 @@ namespace Presentation.UI
         [SerializeField] private Button _refreshButton;
         [SerializeField] private Transform _lobbyListContainer;
         [SerializeField] private GameObject _lobbyItemPrefab;
+        [SerializeField] private Button _menuButton;
 
         [Header("Lobby Panel")]
         [SerializeField] private TMP_Text _lobbyNameText;
@@ -45,6 +46,7 @@ namespace Presentation.UI
             _refreshButton.onClick.AddListener(() => OnRefreshClicked().Forget());
             _leaveButton.onClick.AddListener(() => OnLeaveClicked().Forget());
             _startButton.onClick.AddListener(() => OnStartClicked().Forget());
+            _menuButton.onClick.AddListener(() => SceneManager.LoadScene("Menu"));
 
             _lobbyManager.OnLobbyUpdated += RefreshLobbyPanel;
             _lobbyManager.OnKicked += OnKickedFromLobby;

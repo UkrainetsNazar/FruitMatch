@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DG.Tweening;
 using Presentation.Views;
 using UnityEngine;
 
@@ -22,12 +23,16 @@ namespace Presentation.Pool
         public FruitView Get()
         {
             var view = _pool.Count > 0 ? _pool.Dequeue() : CreateFruitView();
+            view.transform.DOKill();
             view.gameObject.SetActive(true);
             return view;
         }
 
         public void Return(FruitView view)
         {
+            view.transform.DOKill();
+            view.transform.localScale = Vector3.one;
+            view.transform.localRotation = Quaternion.identity;
             view.gameObject.SetActive(false);
             view.transform.SetParent(transform);
             _pool.Enqueue(view);

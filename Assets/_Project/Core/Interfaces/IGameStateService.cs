@@ -10,7 +10,9 @@ namespace Core.Interfaces
 
         event Action<GamePhase> OnPhaseChanged;
         event Action OnDataUpdated;
+        event Action<int> OnGameFinished;
 
+        void NotifyGameFinished(int finalScore);
         void SetPhase(GamePhase phase);
         PlayerData GetPlayerData(string playerId);
         void UpdateScore(string playerId, int delta);
