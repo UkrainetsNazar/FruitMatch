@@ -2,17 +2,26 @@ using System.Collections.Generic;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
+using Presentation.Views;
 
 namespace Presentation.Animations
 {
     public class FruitAnimator : MonoBehaviour
     {
         [SerializeField] private float _stepDuration = 0.05f;
+        private FruitView _fruitView;
+
+        public void Initialize(FruitView fruitView)
+        {
+            _fruitView = fruitView;
+        }
 
         public async UniTask AnimateFall(List<Vector2> worldPath)
         {
             transform.DOKill();
+            _fruitView.ResetScale();
             if (worldPath.Count == 0) return;
+
 
             var sequence = DOTween.Sequence();
 
@@ -35,7 +44,8 @@ namespace Presentation.Animations
         public async UniTask AnimateSwap(Vector2 worldPos)
         {
             transform.DOKill();
-            await transform.DOMove(new Vector3(worldPos.x, worldPos.y, 0f), 0.15f)
+            _fruitView.ResetScale();
+            await transform.DOMove(worldPos, 0.15f)
                 .SetEase(Ease.OutCubic)
                 .AsyncWaitForCompletion();
         }

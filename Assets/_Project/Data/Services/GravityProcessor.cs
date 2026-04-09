@@ -24,10 +24,7 @@ namespace Data.Services
             {
                 anyAction = false;
 
-                while (ApplyVertical(board, movements))
-                    anyAction = true;
-
-                if (ApplyDiagonal(board, movements))
+                while (ApplyMovementStep(board, movements))
                     anyAction = true;
 
                 if (TrySpawn(board, movements, resolveFruitType))
@@ -38,65 +35,56 @@ namespace Data.Services
             return movements;
         }
 
-        private bool ApplyVertical(Board board, List<FruitMovement> movements)
+        private bool ApplyMovementStep(Board board, List<FruitMovement> movements)
         {
             bool moved = false;
+
             for (int y = 0; y < board.Height; y++)
             {
                 for (int x = 0; x < board.Width; x++)
                 {
                     var cell = board.GetCell(x, y);
+
                     if (!cell.IsUsable || cell.Fruit != null) continue;
 
-                    var upPos = new Vector2Int(x, y + 1);
-                    if (board.IsValid(upPos))
+                    if (TryMoveFrom(board, cell, x, y + 1, movements))
                     {
-                        var upCell = board.GetCell(upPos.x, upPos.y);
-                        if (upCell.IsUsable && upCell.Fruit != null)
-                        {
-                            MoveFruit(upCell, cell, movements);
-                            moved = true;
-                        }
+                        moved = true;
+                        continue;
+                    }
+
+                    if (TryMoveFrom(board, cell, x - 1, y + 1, movements) ||
+                        TryMoveFrom(board, cell, x + 1, y + 1, movements))
+                    {
+                        moved = true;
                     }
                 }
             }
             return moved;
         }
 
-        private bool ApplyDiagonal(Board board, List<FruitMovement> movements)
+        private bool TryMoveFrom(Board board, Cell targetCell, int sourceX, int sourceY, List<FruitMovement> movements)
         {
-            for (int y = 0; y < board.Height; y++)
+            if (!board.IsValid(new Vector2Int(sourceX, sourceY))) return false;
+
+            var sourceCell = board.GetCell(sourceX, sourceY);
+
+            if (sourceCell.IsUsable && sourceCell.Fruit != null)
             {
-                for (int x = 0; x < board.Width; x++)
+                if (sourceX != targetCell.Position.x)
                 {
-                    var cell = board.GetCell(x, y);
-                    if (!cell.IsUsable || cell.Fruit != null) continue;
-
-                    var diagonals = new[] { new Vector2Int(x - 1, y + 1), new Vector2Int(x + 1, y + 1) };
-                    foreach (var diagPos in diagonals)
+                    var straightDown = new Vector2Int(sourceX, sourceY - 1);
+                    if (board.IsValid(straightDown))
                     {
-                        if (!board.IsValid(diagPos)) continue;
-                        var diagCell = board.GetCell(diagPos.x, diagPos.y);
-
-                        if (diagCell.IsUsable && diagCell.Fruit != null)
-                        {
-                            var straightDown = new Vector2Int(diagPos.x, diagPos.y - 1);
-                            bool canGoStraight = false;
-                            if (board.IsValid(straightDown))
-                            {
-                                var target = board.GetCell(straightDown.x, straightDown.y);
-                                if (target.IsUsable && target.Fruit == null) canGoStraight = true;
-                            }
-
-                            if (!canGoStraight)
-                            {
-                                MoveFruit(diagCell, cell, movements);
-                                return true;
-                            }
-                        }
+                        var belowSource = board.GetCell(straightDown.x, straightDown.y);
+                        if (belowSource.IsUsable && belowSource.Fruit == null) return false;
                     }
                 }
+
+                MoveFruit(sourceCell, targetCell, movements);
+                return true;
             }
+
             return false;
         }
 
@@ -110,7 +98,9 @@ namespace Data.Services
                     var cell = board.GetCell(x, y);
                     if (!cell.IsUsable) continue;
 
-                    if (cell.Fruit == null && IsTopmostAvailableCell(board, x, y))
+                    if (cell.Fruit != null) break;
+
+                    if (IsTopmostAvailableCell(board, x, y))
                     {
                         var fruitType = resolveFruitType();
                         cell.Fruit = _fruitFactory.Create(fruitType);
@@ -124,15 +114,14 @@ namespace Data.Services
                             SyncFruitType = (int)fruitType
                         });
                         spawned = true;
-                        break;
                     }
-                    if (cell.Fruit != null) break;
+                    break;
                 }
             }
             return spawned;
         }
 
-        // --- Helpers ---
+        // Heplers
 
         private void MoveFruit(Cell from, Cell to, List<FruitMovement> movements)
         {

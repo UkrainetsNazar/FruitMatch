@@ -17,6 +17,7 @@ namespace Presentation.Views
             _spriteRenderer = GetComponent<SpriteRenderer>();
             _animator = GetComponent<FruitAnimator>();
             _originalScale = transform.localScale;
+            _animator.Initialize(this);
         }
 
         public void Setup(Fruit fruit, Sprite sprite)
@@ -27,5 +28,6 @@ namespace Presentation.Views
         }
 
         public FruitAnimator Animator => _animator;
+        public void ResetScale() => transform.localScale = _originalScale;
     }
 }

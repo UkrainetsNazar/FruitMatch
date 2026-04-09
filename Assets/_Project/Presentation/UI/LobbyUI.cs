@@ -34,10 +34,16 @@ namespace Presentation.UI
         [SerializeField] private Button _leaveButton;
         [SerializeField] private Button _startButton;
 
+        [Header("Game Settings")]
+        [SerializeField] private Button boardShape;
+        [SerializeField] private Slider fruitCoundSlider;
+
         [Inject] private LobbyManager _lobbyManager;
         [Inject] private NetworkService _networkService;
         [Inject] private IGameStateService _gameState;
 
+        private readonly string[] _shapeNames = { "Random", "Square", "Ring", "Diamond", "Hourglass" };
+        private int _selectedShapeIndex = 0;
         private string _pendingRelayCode;
 
         private void Start()
@@ -52,6 +58,15 @@ namespace Presentation.UI
             _lobbyManager.OnKicked += OnKickedFromLobby;
             _lobbyManager.OnHostLeft += OnHostLeftLobby;
             _lobbyManager.OnRelayCodeReady += OnRelayCodeReady;
+
+            boardShape.onClick.AddListener(OnShapeCycleClicked);
+            fruitCoundSlider.minValue = 5;
+            fruitCoundSlider.maxValue = 7;
+            fruitCoundSlider.wholeNumbers = true;
+            fruitCoundSlider.value = 7;
+            fruitCoundSlider.onValueChanged.AddListener(OnFruitCountChanged);
+
+            UpdateShapeButtonText();
 
             ShowBrowsePanel();
             OnRefreshClicked().Forget();
@@ -219,6 +234,23 @@ namespace Presentation.UI
         private async UniTaskVoid JoinAsClient()
         {
             await _networkService.StartClientAsync(_pendingRelayCode);
+        }
+
+        private void OnShapeCycleClicked()
+        {
+            _selectedShapeIndex = (_selectedShapeIndex + 1) % _shapeNames.Length;
+            UpdateShapeButtonText();
+        }
+
+        private void UpdateShapeButtonText()
+        {
+            boardShape.GetComponentInChildren<TMP_Text>().text =
+                _shapeNames[_selectedShapeIndex];
+        }
+
+        private void OnFruitCountChanged(float value)
+        {
+            
         }
     }
 }
