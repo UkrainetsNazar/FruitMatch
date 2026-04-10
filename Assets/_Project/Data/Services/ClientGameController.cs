@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Core.Domain;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
+using Data.Factories;
 using Infrastructure.Network;
 using Presentation.Views;
 using Unity.Netcode;
@@ -14,6 +15,7 @@ namespace Data.Services
     {
         private readonly IBoardView _boardView;
         private readonly IBoardFactory _boardFactory;
+        private readonly IFruitFactory _fruitFactory;
         private readonly PreviewManager _previewManager;
         private readonly IGameStateService _gameState;
         private readonly NetworkGameManager _network;
@@ -29,8 +31,9 @@ namespace Data.Services
 
         private string _localPlayerId => NetworkManager.Singleton.LocalClientId.ToString();
 
-        public ClientGameController(IBoardFactory boardFactory, IBoardView boardView, PreviewManager previewManager, IGameStateService gameState, NetworkGameManager network)
+        public ClientGameController(IFruitFactory fruitFactory, IBoardFactory boardFactory, IBoardView boardView, PreviewManager previewManager, IGameStateService gameState, NetworkGameManager network)
         {
+            _fruitFactory = fruitFactory;
             _boardFactory = boardFactory;
             _boardView = boardView;
             _previewManager = previewManager;
@@ -55,6 +58,9 @@ namespace Data.Services
                 if (_isMyTurn) _hint.OnTurnStarted(hintFrom, hintTo);
                 else _hint.OnTurnEnded();
             };
+
+            _network.OnGameSettingsReceived += fruitCount =>
+                _fruitFactory?.SetFruitTypeCount(fruitCount);
 
             _network.OnShuffleReceived += movements =>
                 Enqueue(() => _boardView.PlayShuffle(movements));

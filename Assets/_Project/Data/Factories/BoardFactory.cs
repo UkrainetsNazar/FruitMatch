@@ -46,5 +46,19 @@ namespace Data.Factories
             _matchBoard.Initialize(board, seed);
             return board;
         }
+
+        public Board CreateRandom(out int shapeIndex, out int seed, int shapeChoice = -1)
+        {
+            seed = Random.Range(0, int.MaxValue);
+
+            shapeIndex = shapeChoice >= 0 && shapeChoice < _config.Shapes.Length
+                ? shapeChoice
+                : Random.Range(0, _config.Shapes.Length);
+
+            var shape = _config.Shapes[shapeIndex];
+            var board = new Board(shape.GetMask());
+            _matchBoard.Initialize(board, seed);
+            return board;
+        }
     }
 }

@@ -3479,6 +3479,10 @@ MonoBehaviour:
   _playerItemPrefab: {fileID: 2464850931920057795, guid: d49ade77e208841269c089f78d393849, type: 3}
   _leaveButton: {fileID: 769794760}
   _startButton: {fileID: 871721426}
+  boardShape: {fileID: 407854685}
+  fruitCountSlider: {fileID: 1979523007}
+  fruitTypeCount: {fileID: 1063045282}
+  gameSettingsPanel: {fileID: 1346307477}
 --- !u!1 &1325800938
 GameObject:
   m_ObjectHideFlags: 0
@@ -4915,7 +4919,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2698332781809653556, guid: d49ade77e208841269c089f78d393849, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 879.751
+      value: 880.0438
       objectReference: {fileID: 0}
     - target: {fileID: 2698332781809653556, guid: d49ade77e208841269c089f78d393849, type: 3}
       propertyPath: m_SizeDelta.y
@@ -4951,7 +4955,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2698332781809653556, guid: d49ade77e208841269c089f78d393849, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 449.8755
+      value: 450.0219
       objectReference: {fileID: 0}
     - target: {fileID: 2698332781809653556, guid: d49ade77e208841269c089f78d393849, type: 3}
       propertyPath: m_AnchoredPosition.y

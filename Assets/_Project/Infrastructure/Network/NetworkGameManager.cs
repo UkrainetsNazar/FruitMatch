@@ -10,6 +10,7 @@ namespace Infrastructure.Network
     public class NetworkGameManager : NetworkBehaviour
     {
         public event Action<Vector2Int, Vector2Int, string> OnMoveReceived;
+        public event Action<int> OnGameSettingsReceived;
         public event Action<List<Vector2Int>> OnMatchesProcessed;
         public event Action<List<FruitMovement>> OnGravityApplied;
         public event Action<string, Vector2Int, Vector2Int> OnTurnChanged;
@@ -122,6 +123,13 @@ namespace Infrastructure.Network
         {
             OnGameEnded?.Invoke(winnerId);
         }
+
+        [ClientRpc]
+        public void BroadcastGameSettingsClientRpc(int fruitCount)
+        {
+            OnGameSettingsReceived?.Invoke(fruitCount);
+        }
+
 
         private static List<FruitMovement> ToMovementList(FruitMovementData[] data) =>
         data.Select(m => new FruitMovement

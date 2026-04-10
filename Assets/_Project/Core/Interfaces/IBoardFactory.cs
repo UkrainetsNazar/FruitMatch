@@ -7,5 +7,6 @@ namespace Core.Interfaces
         Board CreateRandom();
         Board CreateByShape(int shapeIndex, int seed);
         Board CreateRandom(out int shapeIndex, out int seed);
+        Board CreateRandom(out int shapeIndex, out int seed, int shapeChoice);
     }
 }

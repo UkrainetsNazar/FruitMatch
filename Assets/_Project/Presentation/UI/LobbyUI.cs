@@ -36,7 +36,9 @@ namespace Presentation.UI
 
         [Header("Game Settings")]
         [SerializeField] private Button boardShape;
-        [SerializeField] private Slider fruitCoundSlider;
+        [SerializeField] private Slider fruitCountSlider;
+        [SerializeField] private TMP_Text fruitTypeCount;
+        [SerializeField] private GameObject gameSettingsPanel;
 
         [Inject] private LobbyManager _lobbyManager;
         [Inject] private NetworkService _networkService;
@@ -60,11 +62,12 @@ namespace Presentation.UI
             _lobbyManager.OnRelayCodeReady += OnRelayCodeReady;
 
             boardShape.onClick.AddListener(OnShapeCycleClicked);
-            fruitCoundSlider.minValue = 5;
-            fruitCoundSlider.maxValue = 7;
-            fruitCoundSlider.wholeNumbers = true;
-            fruitCoundSlider.value = 7;
-            fruitCoundSlider.onValueChanged.AddListener(OnFruitCountChanged);
+            fruitCountSlider.minValue = 5;
+            fruitCountSlider.maxValue = 7;
+            fruitCountSlider.wholeNumbers = true;
+            fruitCountSlider.value = 7;
+            fruitCountSlider.onValueChanged.AddListener(OnFruitCountChanged);
+            fruitTypeCount.text = "7";
 
             UpdateShapeButtonText();
 
@@ -162,6 +165,8 @@ namespace Presentation.UI
             _startButton.gameObject.SetActive(_lobbyManager.IsHost);
             _startButton.interactable = isFull;
 
+            gameSettingsPanel.SetActive(_lobbyManager.IsHost);
+
             RenderPlayerList();
         }
 
@@ -204,6 +209,12 @@ namespace Presentation.UI
         private async UniTaskVoid OnStartClicked()
         {
             _startButton.interactable = false;
+
+            int shapeChoice = _selectedShapeIndex == 0 ? -1 : _selectedShapeIndex - 1;
+            int fruitCount = (int)fruitCountSlider.value;
+
+            PlayerPrefs.SetInt("LobbyShapeChoice", shapeChoice);
+            PlayerPrefs.SetInt("LobbyFruitCount", fruitCount);
 
             await _networkService.StartHostAsync();
 
@@ -250,7 +261,7 @@ namespace Presentation.UI
 
         private void OnFruitCountChanged(float value)
         {
-            
+            fruitTypeCount.text = ((int)value).ToString();
         }
     }
 }

@@ -14,6 +14,7 @@ namespace Data.Services
     {
         private readonly IMatchBoard _matchBoard;
         private readonly IBoardView _boardView;
+        private readonly IFruitFactory _fruitFactory;
         private readonly IBoardFactory _boardFactory;
         private readonly PreviewManager _previewManager;
         private readonly IGameStateService _gameState;
@@ -27,8 +28,9 @@ namespace Data.Services
         private string _currentTurnPlayerId;
         private string _localPlayerId => NetworkManager.Singleton.LocalClientId.ToString();
 
-        public HostGameController(IMatchBoard matchBoard, IBoardFactory boardFactory, IBoardView boardView, PreviewManager previewManager, IGameStateService gameState, NetworkGameManager network)
+        public HostGameController(IFruitFactory fruitFactory, IMatchBoard matchBoard, IBoardFactory boardFactory, IBoardView boardView, PreviewManager previewManager, IGameStateService gameState, NetworkGameManager network)
         {
+            _fruitFactory = fruitFactory;
             _matchBoard = matchBoard;
             _boardView = boardView;
             _boardFactory = boardFactory;
@@ -47,6 +49,13 @@ namespace Data.Services
             _gameState.SetPhase(GamePhase.Lobby);
             await WaitForPlayersAsync();
 
+            int shapeChoice = PlayerPrefs.GetInt("LobbyShapeChoice", -1);
+            int fruitCount = PlayerPrefs.GetInt("LobbyFruitCount", 7);
+
+            _fruitFactory?.SetFruitTypeCount(fruitCount);
+
+            _network.BroadcastGameSettingsClientRpc(fruitCount);
+
             foreach (var client in NetworkManager.Singleton.ConnectedClients)
             {
                 string id = client.Key.ToString();
@@ -56,7 +65,7 @@ namespace Data.Services
                 _network.UpdatePlayerStatsClientRpc(id, 0, 20);
             }
 
-            _boardFactory.CreateRandom(out int shapeIndex, out int seed);
+            _boardFactory.CreateRandom(out int shapeIndex, out int seed, shapeChoice);
 
             await UniTask.WaitUntil(() => _boardView.IsInitialized);
 
@@ -65,10 +74,16 @@ namespace Data.Services
 
             await UniTask.WaitUntil(() => _clientBoardReady);
 
-            _currentTurnPlayerId = _localPlayerId;
-            _network.BroadcastTurnClientRpc(_currentTurnPlayerId, Vector2Int.zero, Vector2Int.zero);
-
             await ProcessAndBroadcast(isInitialProcess: true);
+
+            _currentTurnPlayerId = _localPlayerId;
+
+            var hint = _matchBoard.FindHint();
+            var hintFrom = hint?.Item1 ?? Vector2Int.zero;
+            var hintTo = hint?.Item2 ?? Vector2Int.zero;
+
+            _network.BroadcastTurnClientRpc(_currentTurnPlayerId, hintFrom, hintTo);
+            _hint.OnTurnStarted(hintFrom, hintTo);
 
             _gameState.SetPhase(GamePhase.Playing);
         }
@@ -221,12 +236,19 @@ namespace Data.Services
             while (!_matchBoard.HasAnyValidMove());
 
             var movements = _matchBoard.BuildSpawnMovements();
-
             _network.BroadcastShuffleClientRpc(ToNetworkData(movements));
-
             await _boardView.PlayShuffle(movements);
 
             await ProcessAndBroadcast(isInitialProcess: true);
+
+            var hint = _matchBoard.FindHint();
+            var hintFrom = hint?.Item1 ?? Vector2Int.zero;
+            var hintTo = hint?.Item2 ?? Vector2Int.zero;
+
+            _network.BroadcastTurnClientRpc(_currentTurnPlayerId, hintFrom, hintTo);
+
+            bool isMyTurn = _currentTurnPlayerId == _localPlayerId;
+            if (isMyTurn) _hint.OnTurnStarted(hintFrom, hintTo);
         }
 
         private bool IsGameOver()
