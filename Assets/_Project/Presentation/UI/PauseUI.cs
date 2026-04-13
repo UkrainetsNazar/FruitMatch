@@ -1,5 +1,6 @@
 using Core.Domain;
 using Core.Interfaces;
+using Infrastructure.Audio;
 using Infrastructure.Network;
 using TMPro;
 using Unity.Netcode;
@@ -28,6 +29,7 @@ namespace Presentation.Ui
 
             returnButton.onClick.AddListener(() =>
             {
+                AudioManager.PlayButtonClick();
                 if (NetworkManager.Singleton != null)
                     NetworkManager.Singleton.Shutdown();
                 SceneManager.LoadScene("Menu");
@@ -62,6 +64,7 @@ namespace Presentation.Ui
 
         private void TogglePause()
         {
+            AudioManager.PlayButtonClick();
             if (pausePanel == null) return;
             header.text = "Pause";
             continueButton.gameObject.SetActive(true);

@@ -71,7 +71,8 @@ namespace Data.Services
                 _isLocalPredicting = false;
                 _previewManager.ResetPreview().Forget();
             };
-            _network.OnMatchesProcessed += destroyed => Enqueue(() => _boardView.PlayDestroy(destroyed));
+            _network.OnMatchesProcessed += (destroyed, score) =>
+                Enqueue(() => _boardView.PlayDestroy(destroyed, score));
             _network.OnGravityApplied += movements => Enqueue(() => _boardView.PlayGravity(movements, 0));
 
             _network.OnGameEnded += winnerId =>

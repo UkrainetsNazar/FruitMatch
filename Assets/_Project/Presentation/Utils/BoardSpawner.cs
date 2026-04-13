@@ -10,18 +10,18 @@ namespace Presentation.Utils
     {
         private readonly GameObject _brightCellPrefab;
         private readonly GameObject _darkCellPrefab;
-        private readonly FruitPool _pool;
+        private readonly FruitPool _fruitPool;
         private readonly FruitConfig _fruitConfig;
         private readonly BoardViewUtils _viewUtils;
         private readonly FruitViewRegistry _registry;
         private readonly Transform _parent;
 
-        public BoardSpawner(GameObject bright, GameObject dark, FruitPool pool,
+        public BoardSpawner(GameObject bright, GameObject dark, FruitPool fruitPool,
             FruitConfig config, BoardViewUtils viewUtils, FruitViewRegistry registry, Transform parent)
         {
             _brightCellPrefab = bright;
             _darkCellPrefab = dark;
-            _pool = pool;
+            _fruitPool = fruitPool;
             _fruitConfig = config;
             _viewUtils = viewUtils;
             _registry = registry;
@@ -43,7 +43,7 @@ namespace Presentation.Utils
 
         public FruitView SpawnFruitView(Vector2Int gridPos, Fruit fruit)
         {
-            var view = _pool.Get();
+            var view = _fruitPool.Get();
             view.transform.position = _viewUtils.GridToWorld(gridPos);
             view.transform.SetParent(_parent);
             view.Setup(fruit, _fruitConfig.GetSprite(fruit.Type));
@@ -51,7 +51,7 @@ namespace Presentation.Utils
             return view;
         }
 
-        public void ReturnToPool(FruitView view) => _pool.Return(view);
+        public void ReturnToPool(FruitView view) => _fruitPool.Return(view);
 
         private void SpawnCell(int x, int y)
         {

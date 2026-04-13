@@ -149,22 +149,22 @@ namespace Data.Services
             while (matches.Count > 0)
             {
                 var destroyed = matches.SelectMany(m => m.MatchedPositions).Distinct().ToList();
-
                 _matchBoard.ProcessMatches(matches, currentCombo);
 
+                int currentStepScore = 0;
                 if (!isInitialProcess)
                 {
-                    int currentStepScore = matches.Sum(m => m.Score);
+                    currentStepScore = matches.Sum(m => m.Score);
                     totalTurnScore += currentStepScore;
                     _gameState.UpdateScore(_currentTurnPlayerId, currentStepScore);
                 }
 
                 var movements = _matchBoard.ApplyGravity();
 
-                _network.BroadcastMatchesClientRpc(destroyed.ToArray());
+                _network.BroadcastMatchesClientRpc(destroyed.ToArray(), currentStepScore);
                 _network.BroadcastGravityClientRpc(ToNetworkData(movements));
 
-                await _boardView.PlayDestroy(destroyed);
+                await _boardView.PlayDestroy(destroyed, currentStepScore);
                 await _boardView.PlayGravity(movements, 0);
 
                 currentCombo++;

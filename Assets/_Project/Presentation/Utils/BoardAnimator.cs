@@ -3,6 +3,8 @@ using System.Linq;
 using Core.Domain;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
+using Infrastructure.Audio;
+using Presentation.Pool;
 using Presentation.Views;
 using UnityEngine;
 
@@ -14,14 +16,16 @@ namespace Presentation.Utils
         private readonly BoardSpawner _spawner;
         private readonly BoardViewUtils _viewUtils;
         private readonly IMatchBoard _matchBoard;
+        private readonly ScorePopupPool _scorePopupPool;
 
         public BoardAnimator(FruitViewRegistry registry, BoardSpawner spawner,
-            BoardViewUtils viewUtils, IMatchBoard matchBoard)
+            BoardViewUtils viewUtils, IMatchBoard matchBoard, ScorePopupPool scorePopupPool)
         {
             _registry = registry;
             _spawner = spawner;
             _viewUtils = viewUtils;
             _matchBoard = matchBoard;
+            _scorePopupPool = scorePopupPool;
         }
 
         public async UniTask PlaySwap(Vector2Int from, Vector2Int to)
@@ -37,7 +41,7 @@ namespace Presentation.Utils
             _registry.Swap(from, to);
         }
 
-        public async UniTask PlayDestroy(List<Vector2Int> positions)
+        public async UniTask PlayDestroy(List<Vector2Int> positions, int score = 0)
         {
             var tasks = new List<UniTask>();
             foreach (var pos in positions)
@@ -46,6 +50,17 @@ namespace Presentation.Utils
                 _registry.Remove(pos);
                 tasks.Add(AnimateAndReturn(view));
             }
+
+            if (score > 0 && positions.Count > 0)
+            {
+                var center = Vector3.zero;
+                foreach (var pos in positions)
+                    center += (Vector3)_viewUtils.GridToWorld(pos);
+                center /= positions.Count;
+
+                _scorePopupPool.Get().Play(center, score);
+            }
+
             await UniTask.WhenAll(tasks);
         }
 
@@ -100,6 +115,7 @@ namespace Presentation.Utils
 
         private async UniTask AnimateAndReturn(FruitView view)
         {
+            AudioManager.PlayFruitDestroy();
             await view.Animator.AnimateDestroy();
             _spawner.ReturnToPool(view);
         }

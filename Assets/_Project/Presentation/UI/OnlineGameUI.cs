@@ -1,4 +1,5 @@
 using System.Linq;
+using Infrastructure.Audio;
 using Infrastructure.Network;
 using TMPro;
 using Unity.Netcode;
@@ -41,6 +42,7 @@ namespace Presentation.UI
 
             _returnButton.onClick.AddListener(() =>
             {
+                AudioManager.PlayButtonClick();
                 NetworkManager.Singleton.Shutdown();
                 SceneManager.LoadScene("Lobby");
             });

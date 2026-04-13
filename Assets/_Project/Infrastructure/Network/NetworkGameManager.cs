@@ -11,7 +11,7 @@ namespace Infrastructure.Network
     {
         public event Action<Vector2Int, Vector2Int, string> OnMoveReceived;
         public event Action<int> OnGameSettingsReceived;
-        public event Action<List<Vector2Int>> OnMatchesProcessed;
+        public event Action<List<Vector2Int>, int> OnMatchesProcessed;
         public event Action<List<FruitMovement>> OnGravityApplied;
         public event Action<string, Vector2Int, Vector2Int> OnTurnChanged;
         public event Action OnGameStarted;
@@ -68,9 +68,9 @@ namespace Infrastructure.Network
         // ── Хост → всі клієнти ───────────────────────────────
 
         [ClientRpc]
-        public void BroadcastMatchesClientRpc(Vector2Int[] destroyed)
+        public void BroadcastMatchesClientRpc(Vector2Int[] destroyed, int score)
         {
-            OnMatchesProcessed?.Invoke(new List<Vector2Int>(destroyed));
+            OnMatchesProcessed?.Invoke(new List<Vector2Int>(destroyed), score);
         }
 
         [ClientRpc]

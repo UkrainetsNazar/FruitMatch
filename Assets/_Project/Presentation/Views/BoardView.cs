@@ -16,7 +16,8 @@ namespace Presentation.Views
     {
         [SerializeField] private GameObject _brightCellPrefab;
         [SerializeField] private GameObject _darkCellPrefab;
-        [SerializeField] private FruitPool _pool;
+        [SerializeField] private FruitPool _fuitPool;
+        [SerializeField] private ScorePopupPool _scorePopupPool;
         [SerializeField] private FruitConfig _fruitConfig;
         [SerializeField] private float _cellSize = 0.5f;
         [SerializeField] private float _cellSpacing = 0.1f;
@@ -57,14 +58,13 @@ namespace Presentation.Views
 
             _registry = new FruitViewRegistry();
             _spawner = new BoardSpawner(_brightCellPrefab, _darkCellPrefab,
-                _pool, _fruitConfig, _viewUtils, _registry, transform);
-            _animator = new BoardAnimator(_registry, _spawner, _viewUtils, _matchBoard);
-
+                _fuitPool, _fruitConfig, _viewUtils, _registry, transform);
+            _animator = new BoardAnimator(_registry, _spawner, _viewUtils, _matchBoard, _scorePopupPool);
             _spawner.BuildBoard(board);
         }
 
         public UniTask PlaySwap(Vector2Int from, Vector2Int to) => _animator.PlaySwap(from, to);
-        public UniTask PlayDestroy(List<Vector2Int> positions) => _animator.PlayDestroy(positions);
+        public UniTask PlayDestroy(List<Vector2Int> positions, int score = 0) => _animator.PlayDestroy(positions, score);
         public UniTask PlayGravity(List<FruitMovement> movements, int startDelayMs) => _animator.PlayGravity(movements, startDelayMs);
         public UniTask PlayShuffle(List<FruitMovement> spawnMovements) => _animator.PlayShuffle(spawnMovements);
         public void SwapFruitViewKeys(Vector2Int a, Vector2Int b) => _registry.Swap(a, b);

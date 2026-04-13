@@ -9,6 +9,7 @@ using UnityEngine.UI;
 using Zenject;
 using Core.Interfaces;
 using Unity.Netcode;
+using Infrastructure.Audio;
 
 namespace Presentation.UI
 {
@@ -50,11 +51,16 @@ namespace Presentation.UI
 
         private void Start()
         {
-            _createButton.onClick.AddListener(() => OnCreateClicked().Forget());
-            _refreshButton.onClick.AddListener(() => OnRefreshClicked().Forget());
-            _leaveButton.onClick.AddListener(() => OnLeaveClicked().Forget());
-            _startButton.onClick.AddListener(() => OnStartClicked().Forget());
-            _menuButton.onClick.AddListener(() => SceneManager.LoadScene("Menu"));
+            _createButton.onClick.AddListener(() => 
+            { AudioManager.PlayButtonClick(); OnCreateClicked().Forget();} );
+            _refreshButton.onClick.AddListener(() => 
+            { AudioManager.PlayButtonClick() ;OnRefreshClicked().Forget();} );
+            _leaveButton.onClick.AddListener(() => 
+            { AudioManager.PlayButtonClick(); OnLeaveClicked().Forget();} );
+            _startButton.onClick.AddListener(() => 
+            { AudioManager.PlayButtonClick(); OnStartClicked().Forget();} );
+            _menuButton.onClick.AddListener(() => 
+            { AudioManager.PlayButtonClick(); SceneManager.LoadScene("Menu");} );
 
             _lobbyManager.OnLobbyUpdated += RefreshLobbyPanel;
             _lobbyManager.OnKicked += OnKickedFromLobby;
@@ -249,6 +255,7 @@ namespace Presentation.UI
 
         private void OnShapeCycleClicked()
         {
+            AudioManager.PlayButtonClick();
             _selectedShapeIndex = (_selectedShapeIndex + 1) % _shapeNames.Length;
             UpdateShapeButtonText();
         }

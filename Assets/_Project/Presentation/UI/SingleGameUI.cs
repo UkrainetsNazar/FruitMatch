@@ -1,3 +1,4 @@
+using Infrastructure.Audio;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -24,6 +25,7 @@ namespace Presentation.UI
 
             _returnButton.onClick.AddListener(() =>
             {
+                AudioManager.PlayButtonClick();
                 SceneManager.LoadScene("Menu");
             });
 

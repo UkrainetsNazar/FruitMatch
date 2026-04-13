@@ -86,23 +86,20 @@ namespace Data.Services
 
             while (matches.Count > 0)
             {
-                var destroyed = matches
-                    .SelectMany(m => m.MatchedPositions)
-                    .Distinct()
-                    .ToList();
-
+                var destroyed = matches.SelectMany(m => m.MatchedPositions).Distinct().ToList();
                 _matchBoard.ProcessMatches(matches, currentCombo);
 
+                int turnScore = 0;
                 if (!isInitial)
                 {
-                    int turnScore = matches.Sum(m => m.Score);
+                    turnScore = matches.Sum(m => m.Score);
                     _totalScore += turnScore;
                     _gameState.UpdateScore(LocalPlayerId, _totalScore);
                 }
 
                 var movements = _matchBoard.ApplyGravity();
 
-                await _boardView.PlayDestroy(destroyed);
+                await _boardView.PlayDestroy(destroyed, turnScore);
                 await _boardView.PlayGravity(movements, 0);
 
                 currentCombo++;

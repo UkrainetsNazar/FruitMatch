@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
+using Infrastructure.Audio;
 using Presentation.Utils;
 using Presentation.Views;
 using UnityEngine;
@@ -45,6 +46,8 @@ public class PreviewManager
 
         if (fromView != null && toView != null)
         {
+            AudioManager.PlayFruitSwap();
+
             await UniTask.WhenAll(
                 fromView.Animator.AnimateSwap(_viewUtils.GridToWorld(to)),
                 toView.Animator.AnimateSwap(_viewUtils.GridToWorld(from))
@@ -73,6 +76,7 @@ public class PreviewManager
 
         if (fromView != null && toView != null)
         {
+            AudioManager.PlayFruitSwap();
             await UniTask.WhenAll(
                 fromView.Animator.AnimateSwap(_viewUtils.GridToWorld(_previewFrom)),
                 toView.Animator.AnimateSwap(_viewUtils.GridToWorld(_previewTo))

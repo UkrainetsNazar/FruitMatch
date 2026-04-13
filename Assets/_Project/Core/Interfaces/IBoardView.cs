@@ -11,7 +11,7 @@ namespace Core.Interfaces
         bool IsInitialized { get; }
 
         UniTask PlaySwap(Vector2Int from, Vector2Int to);
-        UniTask PlayDestroy(List<Vector2Int> positions);
+        UniTask PlayDestroy(List<Vector2Int> positions, int score = 0);
         UniTask PlayGravity(List<FruitMovement> movements, int startDelayMs);
         UniTask PlayShuffle(List<FruitMovement> spawnMovements);
 
