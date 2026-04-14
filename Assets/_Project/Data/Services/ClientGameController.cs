@@ -4,6 +4,7 @@ using Core.Domain;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
 using Data.Factories;
+using Infrastructure.Audio;
 using Infrastructure.Network;
 using Presentation.Views;
 using Unity.Netcode;
@@ -71,6 +72,9 @@ namespace Data.Services
                 _isLocalPredicting = false;
                 _previewManager.ResetPreview().Forget();
             };
+
+            _network.OnComboReceived += (playerId, combo) =>
+                _gameState.NotifyCombo(playerId, combo);
             _network.OnMatchesProcessed += (destroyed, score) =>
                 Enqueue(() => _boardView.PlayDestroy(destroyed, score));
             _network.OnGravityApplied += movements => Enqueue(() => _boardView.PlayGravity(movements, 0));

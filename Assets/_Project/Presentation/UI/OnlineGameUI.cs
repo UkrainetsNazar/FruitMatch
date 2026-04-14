@@ -15,6 +15,7 @@ namespace Presentation.UI
         [SerializeField] protected TMP_Text turnText;
         [SerializeField] private TMP_Text opponentScore, opponentMoves;
         [SerializeField] private TMP_Text resultText, finalOpponentScore;
+        [SerializeField] private TMP_Text playerMultiplier, opponentMultiplier;
 
         [InjectOptional] private NetworkGameManager _network;
 
@@ -23,6 +24,7 @@ namespace Presentation.UI
             if (_network != null)
             {
                 _network.OnTurnChanged += HandleTurnChanged;
+                _gameState.OnComboAchieved += OnComboAchieved;
             }
         }
 
@@ -47,13 +49,22 @@ namespace Presentation.UI
                 SceneManager.LoadScene("Lobby");
             });
         }
+
+        protected override void Update()
+        {
+            base.Update();
+        }
+        
         protected override void OnDestroy()
         {
             base.OnDestroy();
             if (_network != null)
                 _network.OnTurnChanged -= HandleTurnChanged;
             if (_gameState != null)
+            {
                 _gameState.OnGameFinished -= OnGameFinished;
+                _gameState.OnComboAchieved -= OnComboAchieved;
+            }
         }
 
         private void OnGameFinished(int finalScore)
@@ -76,6 +87,10 @@ namespace Presentation.UI
 
             resultText.text = isDraw ? "DRAW!" : iWon ? "YOU WIN!" : "YOU LOSE!";
             resultText.color = isDraw ? Color.yellow : iWon ? Color.green : Color.red;
+            if (!iWon)
+                AudioManager.PlayLoseGame();
+            else
+                AudioManager.PlayWinGame();
 
             finalPlayerScore.text = $"{me.Score}";
             if (finalOpponentScore != null && op != null)
@@ -95,6 +110,13 @@ namespace Presentation.UI
             bool isMyTurn = activePlayerId == NetworkManager.Singleton.LocalClientId.ToString();
             turnText.text = isMyTurn ? "YOUR TURN" : "OPPONENT'S TURN";
             turnText.color = isMyTurn ? Color.green : Color.red;
+        }
+
+        private void OnComboAchieved(string playerId, int combo)
+        {
+            string myId = NetworkManager.Singleton.LocalClientId.ToString();
+            var target = playerId == myId ? playerMultiplier : opponentMultiplier;
+            ShowMultiplierOn(target, combo);
         }
 
         protected override void RefreshUI()

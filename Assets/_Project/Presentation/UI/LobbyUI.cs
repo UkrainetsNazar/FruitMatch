@@ -41,6 +41,12 @@ namespace Presentation.UI
         [SerializeField] private TMP_Text fruitTypeCount;
         [SerializeField] private GameObject gameSettingsPanel;
 
+        [Header("General Settings")]
+        [SerializeField] private GameObject settingsPanel;
+        [SerializeField] private Slider musicVolumeSlider, sfxVolumeSlider;
+        [SerializeField] private TMP_Text musicVolumeText, sfxVolumeText;
+        [SerializeField] private Button backButton, quitButton;
+
         [Inject] private LobbyManager _lobbyManager;
         [Inject] private NetworkService _networkService;
         [Inject] private IGameStateService _gameState;
@@ -51,16 +57,18 @@ namespace Presentation.UI
 
         private void Start()
         {
-            _createButton.onClick.AddListener(() => 
-            { AudioManager.PlayButtonClick(); OnCreateClicked().Forget();} );
-            _refreshButton.onClick.AddListener(() => 
-            { AudioManager.PlayButtonClick() ;OnRefreshClicked().Forget();} );
-            _leaveButton.onClick.AddListener(() => 
-            { AudioManager.PlayButtonClick(); OnLeaveClicked().Forget();} );
-            _startButton.onClick.AddListener(() => 
-            { AudioManager.PlayButtonClick(); OnStartClicked().Forget();} );
-            _menuButton.onClick.AddListener(() => 
-            { AudioManager.PlayButtonClick(); SceneManager.LoadScene("Menu");} );
+            _createButton.onClick.AddListener(() =>
+            { AudioManager.PlayButtonClick(); OnCreateClicked().Forget(); });
+            _refreshButton.onClick.AddListener(() =>
+            { AudioManager.PlayButtonClick(); OnRefreshClicked().Forget(); });
+            _leaveButton.onClick.AddListener(() =>
+            { AudioManager.PlayButtonClick(); OnLeaveClicked().Forget(); });
+            _startButton.onClick.AddListener(() =>
+            { AudioManager.PlayButtonClick(); OnStartClicked().Forget(); });
+            _menuButton.onClick.AddListener(() =>
+            { AudioManager.PlayButtonClick(); SceneManager.LoadScene("Menu"); });
+            quitButton.onClick.AddListener(() => 
+            { AudioManager.PlayButtonClick(); Application.Quit(); });
 
             _lobbyManager.OnLobbyUpdated += RefreshLobbyPanel;
             _lobbyManager.OnKicked += OnKickedFromLobby;
@@ -79,6 +87,28 @@ namespace Presentation.UI
 
             ShowBrowsePanel();
             OnRefreshClicked().Forget();
+
+            settingsPanel.SetActive(false);
+            VolumeSliderBinder.BindMusic(musicVolumeSlider, musicVolumeText);
+            VolumeSliderBinder.BindSfx(sfxVolumeSlider, sfxVolumeText);
+
+            backButton.onClick.AddListener(() =>
+            {
+                AudioManager.PlayButtonClick();
+                settingsPanel.SetActive(false);
+            });
+
+            quitButton.onClick.AddListener(() =>
+            {
+                AudioManager.PlayButtonClick();
+                Application.Quit();
+            });
+        }
+
+        private void Update()
+        {
+            if (Input.GetKeyDown(KeyCode.Escape))
+                settingsPanel.SetActive(!settingsPanel.activeSelf);
         }
 
         private void OnDestroy()

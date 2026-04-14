@@ -29,7 +29,6 @@ public class PreviewManager
     public async UniTask StartPreview(Vector2Int from, Vector2Int to)
     {
         if (_isAnimating) return;
-
         if (_isPreviewActive && _previewFrom == from && _previewTo == to) return;
 
         _isAnimating = true;
@@ -47,7 +46,6 @@ public class PreviewManager
         if (fromView != null && toView != null)
         {
             AudioManager.PlayFruitSwap();
-
             await UniTask.WhenAll(
                 fromView.Animator.AnimateSwap(_viewUtils.GridToWorld(to)),
                 toView.Animator.AnimateSwap(_viewUtils.GridToWorld(from))
@@ -76,7 +74,6 @@ public class PreviewManager
 
         if (fromView != null && toView != null)
         {
-            AudioManager.PlayFruitSwap();
             await UniTask.WhenAll(
                 fromView.Animator.AnimateSwap(_viewUtils.GridToWorld(_previewFrom)),
                 toView.Animator.AnimateSwap(_viewUtils.GridToWorld(_previewTo))

@@ -14,6 +14,7 @@ namespace Data.Services
         public event Action<GamePhase> OnPhaseChanged;
         public event Action OnDataUpdated;
         public event Action<int> OnGameFinished;
+        public event Action<string, int> OnComboAchieved;
 
         public void NotifyGameFinished(int finalScore)
         {
@@ -62,6 +63,11 @@ namespace Data.Services
                 PlayerName = playerName,
                 Score = 0
             };
+        }
+
+        public void NotifyCombo(string playerId, int combo)
+        {
+            OnComboAchieved?.Invoke(playerId, combo);
         }
     }
 }

@@ -11,7 +11,9 @@ namespace Core.Interfaces
         event Action<GamePhase> OnPhaseChanged;
         event Action OnDataUpdated;
         event Action<int> OnGameFinished;
-
+        event Action<string, int> OnComboAchieved;
+        
+        void NotifyCombo(string playerId, int combo);
         void NotifyGameFinished(int finalScore);
         void SetPhase(GamePhase phase);
         PlayerData GetPlayerData(string playerId);

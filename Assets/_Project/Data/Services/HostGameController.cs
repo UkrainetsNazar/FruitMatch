@@ -3,6 +3,7 @@ using System.Linq;
 using Core.Domain;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
+using Infrastructure.Audio;
 using Infrastructure.Network;
 using Presentation.Views;
 using Unity.Netcode;
@@ -20,15 +21,16 @@ namespace Data.Services
         private readonly IGameStateService _gameState;
         private readonly NetworkGameManager _network;
         private readonly HintSystem _hint;
+        private readonly TurnManager _turnManager;
+        private readonly ScoreTracker _scoreTracker;
+        private readonly MatchProcessor _matchProcessor;
 
-        private int _hostMoves = 20;
-        private int _clientMoves = 20;
-        private bool _clientBoardReady = false;
-        private Dictionary<string, int> _playerScores = new();
-        private string _currentTurnPlayerId;
+        private bool _clientBoardReady;
         private string _localPlayerId => NetworkManager.Singleton.LocalClientId.ToString();
 
-        public HostGameController(IFruitFactory fruitFactory, IMatchBoard matchBoard, IBoardFactory boardFactory, IBoardView boardView, PreviewManager previewManager, IGameStateService gameState, NetworkGameManager network)
+        public HostGameController(IFruitFactory fruitFactory, IMatchBoard matchBoard,
+            IBoardFactory boardFactory, IBoardView boardView, PreviewManager previewManager,
+            IGameStateService gameState, NetworkGameManager network)
         {
             _fruitFactory = fruitFactory;
             _matchBoard = matchBoard;
@@ -39,6 +41,9 @@ namespace Data.Services
             _network = network;
 
             _hint = new HintSystem(_boardView);
+            _turnManager = new TurnManager(network, matchBoard);
+            _scoreTracker = new ScoreTracker(network, gameState);
+            _matchProcessor = new MatchProcessor(matchBoard, boardView, gameState, network);
 
             _network.OnMoveReceived += OnMoveReceived;
             _network.OnClientBoardReady += () => _clientBoardReady = true;
@@ -53,50 +58,29 @@ namespace Data.Services
             int fruitCount = PlayerPrefs.GetInt("LobbyFruitCount", 7);
 
             _fruitFactory?.SetFruitTypeCount(fruitCount);
-
             _network.BroadcastGameSettingsClientRpc(fruitCount);
 
-            foreach (var client in NetworkManager.Singleton.ConnectedClients)
-            {
-                string id = client.Key.ToString();
-                _playerScores[id] = 0;
-                _gameState.UpdateScore(id, 0);
-                _gameState.UpdateMoves(id, 20);
-                _network.UpdatePlayerStatsClientRpc(id, 0, 20);
-            }
+            var playerIds = NetworkManager.Singleton.ConnectedClients.Keys
+                .Select(k => k.ToString());
+            _scoreTracker.Initialize(playerIds);
 
             _boardFactory.CreateRandom(out int shapeIndex, out int seed, shapeChoice);
-
             await UniTask.WaitUntil(() => _boardView.IsInitialized);
 
             _network.BroadcastBoardDataClientRpc(shapeIndex, seed);
             _network.BroadcastGameStartedClientRpc();
-
             await UniTask.WaitUntil(() => _clientBoardReady);
 
-            await ProcessAndBroadcast(isInitialProcess: true);
+            await _matchProcessor.ProcessCascade(_localPlayerId, countScore: false);
 
-            _currentTurnPlayerId = _localPlayerId;
-
-            var hint = _matchBoard.FindHint();
-            var hintFrom = hint?.Item1 ?? Vector2Int.zero;
-            var hintTo = hint?.Item2 ?? Vector2Int.zero;
-
-            _network.BroadcastTurnClientRpc(_currentTurnPlayerId, hintFrom, hintTo);
-            _hint.OnTurnStarted(hintFrom, hintTo);
-
+            _turnManager.SetInitialTurn(_localPlayerId, _hint);
+            _hint.OnTurnStarted(Vector2Int.zero, Vector2Int.zero);
             _gameState.SetPhase(GamePhase.Playing);
-        }
-
-        private async UniTask WaitForPlayersAsync()
-        {
-            while (NetworkManager.Singleton.ConnectedClients.Count < 2)
-                await UniTask.Delay(100);
         }
 
         public async UniTask OnPlayerSwap(Vector2Int from, Vector2Int to)
         {
-            if (_currentTurnPlayerId != _localPlayerId) return;
+            if (!_turnManager.IsMyTurn) return;
             _hint.OnPlayerActed();
 
             if (!_matchBoard.TrySwap(from, to))
@@ -106,16 +90,15 @@ namespace Data.Services
             }
 
             _network.BroadcastSwapClientRpc(from, to);
-
             await _boardView.PlaySwap(from, to);
 
-            await ProcessAndBroadcast();
-            SwitchTurn();
+            await ProcessAndFinalizeTurn();
+            _turnManager.SwitchTurn(_hint);
         }
 
         private void OnMoveReceived(Vector2Int from, Vector2Int to, string senderId)
         {
-            if (_currentTurnPlayerId != senderId) return;
+            if (_turnManager.CurrentTurnPlayerId != senderId) return;
             HandleRemoteMove(from, to, senderId).Forget();
         }
 
@@ -133,101 +116,35 @@ namespace Data.Services
 
             _network.BroadcastSwapClientRpc(from, to);
             await _boardView.PlaySwap(from, to);
-            await ProcessAndBroadcast();
-            SwitchTurn();
+            await ProcessAndFinalizeTurn();
+            _turnManager.SwitchTurn(_hint);
         }
 
-        private async UniTask ProcessAndBroadcast(bool isInitialProcess = false)
+        private async UniTask ProcessAndFinalizeTurn()
         {
             _hint.OnTurnEnded();
             _gameState.SetPhase(GamePhase.Processing);
 
-            int currentCombo = 1;
-            int totalTurnScore = 0;
-            var matches = _matchBoard.FindMatches();
-
-            while (matches.Count > 0)
-            {
-                var destroyed = matches.SelectMany(m => m.MatchedPositions).Distinct().ToList();
-                _matchBoard.ProcessMatches(matches, currentCombo);
-
-                int currentStepScore = 0;
-                if (!isInitialProcess)
-                {
-                    currentStepScore = matches.Sum(m => m.Score);
-                    totalTurnScore += currentStepScore;
-                    _gameState.UpdateScore(_currentTurnPlayerId, currentStepScore);
-                }
-
-                var movements = _matchBoard.ApplyGravity();
-
-                _network.BroadcastMatchesClientRpc(destroyed.ToArray(), currentStepScore);
-                _network.BroadcastGravityClientRpc(ToNetworkData(movements));
-
-                await _boardView.PlayDestroy(destroyed, currentStepScore);
-                await _boardView.PlayGravity(movements, 0);
-
-                currentCombo++;
-                matches = _matchBoard.FindMatches();
-            }
-
-            if (isInitialProcess)
-            {
-                _gameState.SetPhase(GamePhase.Playing);
-                return;
-            }
+            string currentPlayer = _turnManager.CurrentTurnPlayerId;
+            int totalScore = await _matchProcessor.ProcessCascade(currentPlayer, countScore: true);
 
             _gameState.SetPhase(GamePhase.Playing);
 
-            if (!_playerScores.ContainsKey(_currentTurnPlayerId))
-                _playerScores[_currentTurnPlayerId] = 0;
+            _scoreTracker.AddScore(currentPlayer, totalScore);
+            _scoreTracker.DecrementMoves(currentPlayer);
+            _scoreTracker.SyncToNetwork(currentPlayer);
 
-            _playerScores[_currentTurnPlayerId] += totalTurnScore;
-
-            if (_currentTurnPlayerId == _localPlayerId)
-                _hostMoves--;
-            else
-                _clientMoves--;
-
-            int currentMoves = (_currentTurnPlayerId == _localPlayerId) ? _hostMoves : _clientMoves;
-
-            _network.UpdatePlayerStatsClientRpc(_currentTurnPlayerId, _playerScores[_currentTurnPlayerId], currentMoves);
-
-            _gameState.UpdateScore(_currentTurnPlayerId, _playerScores[_currentTurnPlayerId]);
-            _gameState.UpdateMoves(_currentTurnPlayerId, currentMoves);
-
-            if (IsGameOver())
+            if (_scoreTracker.IsGameOver())
             {
-                var winnerId = DetermineWinner();
+                var winnerId = _scoreTracker.DetermineWinner();
                 _network.BroadcastGameEndedClientRpc(winnerId);
-
                 await UniTask.Delay(500);
-                var me = _gameState.GetPlayerData(_localPlayerId);
-                _gameState.NotifyGameFinished(me.Score);
+                _gameState.NotifyGameFinished(_gameState.GetPlayerData(_localPlayerId).Score);
                 return;
             }
 
             if (!_matchBoard.HasAnyValidMove())
                 await ShuffleAndBroadcast();
-        }
-
-        private void SwitchTurn()
-        {
-            var clients = NetworkManager.Singleton.ConnectedClients.Keys.ToList();
-            ulong nextTurnId = clients.First(id => id.ToString() != _currentTurnPlayerId);
-            _currentTurnPlayerId = nextTurnId.ToString();
-
-            bool isMyTurn = _currentTurnPlayerId == _localPlayerId;
-            _gameState.SetPhase(isMyTurn ? GamePhase.Playing : GamePhase.Paused);
-
-            var hint = _matchBoard.FindHint();
-            var hintFrom = hint?.Item1 ?? Vector2Int.zero;
-            var hintTo = hint?.Item2 ?? Vector2Int.zero;
-
-            _network.BroadcastTurnClientRpc(_currentTurnPlayerId, hintFrom, hintTo);
-
-            if (isMyTurn) _hint.OnTurnStarted(hintFrom, hintTo);
-            else _hint.OnTurnEnded();
         }
 
         private async UniTask ShuffleAndBroadcast()
@@ -239,34 +156,14 @@ namespace Data.Services
             _network.BroadcastShuffleClientRpc(ToNetworkData(movements));
             await _boardView.PlayShuffle(movements);
 
-            await ProcessAndBroadcast(isInitialProcess: true);
-
-            var hint = _matchBoard.FindHint();
-            var hintFrom = hint?.Item1 ?? Vector2Int.zero;
-            var hintTo = hint?.Item2 ?? Vector2Int.zero;
-
-            _network.BroadcastTurnClientRpc(_currentTurnPlayerId, hintFrom, hintTo);
-
-            bool isMyTurn = _currentTurnPlayerId == _localPlayerId;
-            if (isMyTurn) _hint.OnTurnStarted(hintFrom, hintTo);
+            await _matchProcessor.ProcessCascade(_turnManager.CurrentTurnPlayerId, countScore: false);
+            _turnManager.SetInitialTurn(_turnManager.CurrentTurnPlayerId, _hint);
         }
 
-        private bool IsGameOver()
+        private async UniTask WaitForPlayersAsync()
         {
-            bool hostOut = _hostMoves <= 0;
-            bool clientOut = _clientMoves <= 0;
-            return hostOut || clientOut;
-        }
-
-        private string DetermineWinner()
-        {
-            int hostScore = _playerScores.GetValueOrDefault(_localPlayerId, 0);
-            string clientId = _playerScores.Keys.FirstOrDefault(id => id != _localPlayerId);
-            int clientScore = clientId != null ? _playerScores.GetValueOrDefault(clientId, 0) : 0;
-
-            if (hostScore > clientScore) return _localPlayerId;
-            if (clientScore > hostScore) return clientId;
-            return string.Empty;
+            while (NetworkManager.Singleton.ConnectedClients.Count < 2)
+                await UniTask.Delay(100);
         }
 
         private FruitMovementData[] ToNetworkData(List<FruitMovement> movements) =>

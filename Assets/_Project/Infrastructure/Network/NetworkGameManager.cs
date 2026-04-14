@@ -9,20 +9,26 @@ namespace Infrastructure.Network
 {
     public class NetworkGameManager : NetworkBehaviour
     {
+        // Client → Host events
         public event Action<Vector2Int, Vector2Int, string> OnMoveReceived;
-        public event Action<int> OnGameSettingsReceived;
+        public event Action OnClientBoardReady;
+
+        // Host → Client events  
         public event Action<List<Vector2Int>, int> OnMatchesProcessed;
         public event Action<List<FruitMovement>> OnGravityApplied;
         public event Action<string, Vector2Int, Vector2Int> OnTurnChanged;
-        public event Action OnGameStarted;
-        public event Action<int, int> OnBoardDataReceived;
-        public event Action<Vector2Int, Vector2Int> OnSwapReceived;
-        public event Action<string, int, int> OnStatsReceived;
-        public event Action OnClientBoardReady;
-        public event Action OnSwapFailed;
+        public event Action<string, int> OnComboReceived;
         public event Action<List<FruitMovement>> OnShuffleReceived;
-        public event Action OnOpponentDisconnected;
+        public event Action<string, int, int> OnStatsReceived;
         public event Action<string> OnGameEnded;
+        public event Action<int, int> OnBoardDataReceived;
+        public event Action<int> OnGameSettingsReceived;
+        public event Action<Vector2Int, Vector2Int> OnSwapReceived;
+        public event Action OnSwapFailed;
+        public event Action OnGameStarted;
+
+        // Connection events
+        public event Action OnOpponentDisconnected;
 
         public override void OnNetworkSpawn()
         {
@@ -128,6 +134,12 @@ namespace Infrastructure.Network
         public void BroadcastGameSettingsClientRpc(int fruitCount)
         {
             OnGameSettingsReceived?.Invoke(fruitCount);
+        }
+
+        [ClientRpc]
+        public void BroadcastComboClientRpc(string playerId, int combo)
+        {
+            OnComboReceived?.Invoke(playerId, combo);
         }
 
 

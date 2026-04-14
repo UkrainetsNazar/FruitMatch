@@ -3,6 +3,7 @@ using System.Linq;
 using Core.Domain;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
+using Infrastructure.Audio;
 using Presentation.Views;
 using UnityEngine;
 
@@ -101,6 +102,9 @@ namespace Data.Services
 
                 await _boardView.PlayDestroy(destroyed, turnScore);
                 await _boardView.PlayGravity(movements, 0);
+
+                if (!isInitial && currentCombo > 1)
+                    _gameState.NotifyCombo(LocalPlayerId, currentCombo);
 
                 currentCombo++;
                 matches = _matchBoard.FindMatches();

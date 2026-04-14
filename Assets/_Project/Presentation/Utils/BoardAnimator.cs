@@ -33,6 +33,8 @@ namespace Presentation.Utils
             if (!_registry.TryGet(from, out var viewFrom)) return;
             if (!_registry.TryGet(to, out var viewTo)) return;
 
+            AudioManager.PlayFruitSwap();
+
             await UniTask.WhenAll(
                 viewFrom.Animator.AnimateSwap(_viewUtils.GridToWorld(to)),
                 viewTo.Animator.AnimateSwap(_viewUtils.GridToWorld(from))
