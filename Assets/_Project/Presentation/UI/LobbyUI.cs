@@ -10,42 +10,43 @@ using Zenject;
 using Core.Interfaces;
 using Unity.Netcode;
 using Infrastructure.Audio;
+using Presentation.Animations;
 
 namespace Presentation.UI
 {
     public class LobbyUI : MonoBehaviour
     {
         [Header("Panels")]
-        [SerializeField] private GameObject _browsePanelGO;
-        [SerializeField] private GameObject _lobbyPanelGO;
+        [SerializeField] private PanelAnimator _browsePanelGO;
+        [SerializeField] private PanelAnimator _lobbyPanelGO;
 
         [Header("Browse Panel")]
         [SerializeField] private TMP_InputField _lobbyNameInput;
-        [SerializeField] private Button _createButton;
-        [SerializeField] private Button _refreshButton;
+        [SerializeField] private ButtonAnimator _createButton;
+        [SerializeField] private ButtonAnimator _refreshButton;
         [SerializeField] private Transform _lobbyListContainer;
         [SerializeField] private GameObject _lobbyItemPrefab;
-        [SerializeField] private Button _menuButton;
+        [SerializeField] private ButtonAnimator _menuButton;
 
         [Header("Lobby Panel")]
         [SerializeField] private TMP_Text _lobbyNameText;
         [SerializeField] private TMP_Text _playersCountText;
         [SerializeField] private Transform _playersContainer;
         [SerializeField] private GameObject _playerItemPrefab;
-        [SerializeField] private Button _leaveButton;
-        [SerializeField] private Button _startButton;
+        [SerializeField] private ButtonAnimator _leaveButton;
+        [SerializeField] private ButtonAnimator _startButton;
 
         [Header("Game Settings")]
-        [SerializeField] private Button boardShape;
+        [SerializeField] private ButtonAnimator boardShape;
         [SerializeField] private Slider fruitCountSlider;
         [SerializeField] private TMP_Text fruitTypeCount;
         [SerializeField] private GameObject gameSettingsPanel;
 
         [Header("General Settings")]
-        [SerializeField] private GameObject settingsPanel;
+        [SerializeField] private PanelAnimator settingsPanel;
         [SerializeField] private Slider musicVolumeSlider, sfxVolumeSlider;
         [SerializeField] private TMP_Text musicVolumeText, sfxVolumeText;
-        [SerializeField] private Button backButton, quitButton;
+        [SerializeField] private ButtonAnimator backButton, quitButton;
 
         [Inject] private LobbyManager _lobbyManager;
         [Inject] private NetworkService _networkService;
@@ -67,7 +68,7 @@ namespace Presentation.UI
             { AudioManager.PlayButtonClick(); OnStartClicked().Forget(); });
             _menuButton.onClick.AddListener(() =>
             { AudioManager.PlayButtonClick(); SceneManager.LoadScene("Menu"); });
-            quitButton.onClick.AddListener(() => 
+            quitButton.onClick.AddListener(() =>
             { AudioManager.PlayButtonClick(); Application.Quit(); });
 
             _lobbyManager.OnLobbyUpdated += RefreshLobbyPanel;
@@ -88,14 +89,14 @@ namespace Presentation.UI
             ShowBrowsePanel();
             OnRefreshClicked().Forget();
 
-            settingsPanel.SetActive(false);
+            settingsPanel.Hide();
             VolumeSliderBinder.BindMusic(musicVolumeSlider, musicVolumeText);
             VolumeSliderBinder.BindSfx(sfxVolumeSlider, sfxVolumeText);
 
             backButton.onClick.AddListener(() =>
             {
                 AudioManager.PlayButtonClick();
-                settingsPanel.SetActive(false);
+                settingsPanel.Hide();
             });
 
             quitButton.onClick.AddListener(() =>
@@ -108,7 +109,7 @@ namespace Presentation.UI
         private void Update()
         {
             if (Input.GetKeyDown(KeyCode.Escape))
-                settingsPanel.SetActive(!settingsPanel.activeSelf);
+                if (settingsPanel.IsVisible) settingsPanel.Hide(); else settingsPanel.Show();
         }
 
         private void OnDestroy()
@@ -123,14 +124,14 @@ namespace Presentation.UI
 
         private void ShowBrowsePanel()
         {
-            _browsePanelGO.SetActive(true);
-            _lobbyPanelGO.SetActive(false);
+            _browsePanelGO.Show();
+            _lobbyPanelGO.Hide();
         }
 
         private void ShowLobbyPanel()
         {
-            _browsePanelGO.SetActive(false);
-            _lobbyPanelGO.SetActive(true);
+            _browsePanelGO.Hide();
+            _lobbyPanelGO.Show();
         }
 
         private async UniTaskVoid OnCreateClicked()
@@ -154,6 +155,9 @@ namespace Presentation.UI
             _refreshButton.interactable = false;
 
             var lobbies = await _lobbyManager.GetLobbiesAsync();
+
+            if (this == null || !gameObject.activeInHierarchy) return;
+
             RenderLobbyList(lobbies);
 
             _refreshButton.interactable = true;
@@ -161,16 +165,21 @@ namespace Presentation.UI
 
         private void RenderLobbyList(List<Lobby> lobbies)
         {
+            if (_lobbyListContainer == null) return;
+
             foreach (Transform child in _lobbyListContainer)
-                Destroy(child.gameObject);
+            {
+                if (child != null)
+                    Destroy(child.gameObject);
+            }
 
             foreach (var lobby in lobbies)
             {
+                if (_lobbyListContainer == null) return;
+
                 var item = Instantiate(_lobbyItemPrefab, _lobbyListContainer);
 
-                item.transform.Find("LobbyName").GetComponent<TMP_Text>().text =
-                    lobby.Name;
-
+                item.transform.Find("LobbyName").GetComponent<TMP_Text>().text = lobby.Name;
                 item.transform.Find("PlayersCount").GetComponent<TMP_Text>().text =
                     $"{lobby.Players.Count}/{lobby.MaxPlayers}";
 
@@ -202,7 +211,7 @@ namespace Presentation.UI
             _startButton.interactable = isFull;
 
             gameSettingsPanel.SetActive(_lobbyManager.IsHost);
-
+            
             RenderPlayerList();
         }
 

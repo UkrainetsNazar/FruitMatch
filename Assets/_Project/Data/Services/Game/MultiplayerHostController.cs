@@ -3,7 +3,6 @@ using System.Linq;
 using Core.Domain;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
-using Infrastructure.Audio;
 using Infrastructure.Network;
 using Presentation.Views;
 using Unity.Netcode;
@@ -11,7 +10,7 @@ using UnityEngine;
 
 namespace Data.Services
 {
-    public class HostGameController : IGameController
+    public class MultiplayerHostController : IGameController
     {
         private readonly IMatchBoard _matchBoard;
         private readonly IBoardView _boardView;
@@ -28,7 +27,7 @@ namespace Data.Services
         private bool _clientBoardReady;
         private string _localPlayerId => NetworkManager.Singleton.LocalClientId.ToString();
 
-        public HostGameController(IFruitFactory fruitFactory, IMatchBoard matchBoard,
+        public MultiplayerHostController(IFruitFactory fruitFactory, IMatchBoard matchBoard,
             IBoardFactory boardFactory, IBoardView boardView, PreviewManager previewManager,
             IGameStateService gameState, NetworkGameManager network)
         {

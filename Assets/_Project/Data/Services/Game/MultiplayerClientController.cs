@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Data.Services
 {
-    public class ClientGameController : IGameController
+    public class MultiplayerClientController: IGameController
     {
         private readonly IBoardView _boardView;
         private readonly IBoardFactory _boardFactory;
@@ -32,7 +32,7 @@ namespace Data.Services
 
         private string _localPlayerId => NetworkManager.Singleton.LocalClientId.ToString();
 
-        public ClientGameController(IFruitFactory fruitFactory, IBoardFactory boardFactory, IBoardView boardView, PreviewManager previewManager, IGameStateService gameState, NetworkGameManager network)
+        public MultiplayerClientController(IFruitFactory fruitFactory, IBoardFactory boardFactory, IBoardView boardView, PreviewManager previewManager, IGameStateService gameState, NetworkGameManager network)
         {
             _fruitFactory = fruitFactory;
             _boardFactory = boardFactory;

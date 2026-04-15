@@ -2,6 +2,7 @@ using Core.Domain;
 using Core.Interfaces;
 using Infrastructure.Audio;
 using Infrastructure.Network;
+using Presentation.Animations;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
@@ -14,8 +15,8 @@ namespace Presentation.Ui
     public class PauseUI : MonoBehaviour
     {
         [SerializeField] private TMP_Text header;
-        [SerializeField] private Button returnButton, continueButton;
-        [SerializeField] private GameObject pausePanel;
+        [SerializeField] private ButtonAnimator returnButton, continueButton, quitButton;
+        [SerializeField] private PanelAnimator pausePanel;
 
         [InjectOptional] private NetworkGameManager _network;
         [Inject] private IGameStateService _gameState;
@@ -25,7 +26,7 @@ namespace Presentation.Ui
         void Start()
         {
             if (pausePanel != null)
-                pausePanel.SetActive(false);
+                pausePanel.Hide();
 
             returnButton.onClick.AddListener(() =>
             {
@@ -36,6 +37,9 @@ namespace Presentation.Ui
             });
 
             continueButton.onClick.AddListener(TogglePause);
+
+            quitButton.onClick.AddListener(() =>
+            { AudioManager.PlayButtonClick(); Application.Quit(); });
 
             if (_network != null) _network.OnOpponentDisconnected += OnOpponentDisconnected;
             _gameState.OnGameFinished += _ => _isGameFinished = true;
@@ -59,7 +63,7 @@ namespace Presentation.Ui
 
             header.text = "Opponent left the game";
             continueButton.gameObject.SetActive(false);
-            pausePanel.SetActive(true);
+            pausePanel.Show();
         }
 
         private void TogglePause()
@@ -68,7 +72,7 @@ namespace Presentation.Ui
             if (pausePanel == null) return;
             header.text = "Pause";
             continueButton.gameObject.SetActive(true);
-            pausePanel.SetActive(!pausePanel.activeSelf);
+            if (pausePanel.IsVisible) pausePanel.Hide(); else pausePanel.Show();
         }
     }
 }

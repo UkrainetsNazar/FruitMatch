@@ -1,4 +1,5 @@
 using Infrastructure.Audio;
+using Presentation.Animations;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -8,22 +9,20 @@ namespace Presentation.Canvas
 {
     public class MainMenuUI : MonoBehaviour
     {
-        [SerializeField] private GameObject settingsPanel;
+        [SerializeField] private PanelAnimator settingsPanel;
         [SerializeField] private Slider musicVolumeSlider, sfxVolumeSlider;
         [SerializeField] private TMP_Text musicVolumeText, sfxVolumeText;
-        [SerializeField] private Button backButton, quitButton;
+        [SerializeField] private ButtonAnimator backButton, quitButton;
 
         void Start()
         {
-            settingsPanel.SetActive(false);
-
             VolumeSliderBinder.BindMusic(musicVolumeSlider, musicVolumeText);
             VolumeSliderBinder.BindSfx(sfxVolumeSlider, sfxVolumeText);
 
             backButton.onClick.AddListener(() =>
             {
                 AudioManager.PlayButtonClick();
-                settingsPanel.SetActive(false);
+                settingsPanel.Hide();
             });
 
             quitButton.onClick.AddListener(() =>
@@ -36,7 +35,7 @@ namespace Presentation.Canvas
         void Update()
         {
             if (Input.GetKeyDown(KeyCode.Escape))
-                settingsPanel.SetActive(!settingsPanel.activeSelf);
+                if (settingsPanel.IsVisible) settingsPanel.Hide(); else settingsPanel.Show();
         }
 
         public void OnOnlineGameClick()

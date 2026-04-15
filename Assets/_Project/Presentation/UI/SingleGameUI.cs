@@ -1,4 +1,5 @@
 using Infrastructure.Audio;
+using Presentation.Animations;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
@@ -8,7 +9,7 @@ namespace Presentation.UI
 {
     public class SingleGameUI : BaseGameUI
     {
-        [SerializeField] protected GameObject singleGamePanel;
+        [SerializeField] protected PanelAnimator singleGamePanel;
         [SerializeField] protected TMP_Text playerMultiplier;
 
         protected override void Start()
@@ -20,8 +21,8 @@ namespace Presentation.UI
             }
 
             base.Start();
-            if (singleGamePanel != null) singleGamePanel.SetActive(true);
-            if (resultPanel != null) resultPanel.SetActive(false);
+            if (singleGamePanel != null) singleGamePanel.Show();
+            if (resultPanel != null) resultPanel.Hide();
 
             _gameState.OnGameFinished += ShowResult;
             _gameState.OnComboAchieved += OnComboAchieved;
@@ -58,8 +59,7 @@ namespace Presentation.UI
             if (finalPlayerScore != null)
                 finalPlayerScore.text = $"{finalScore}";
 
-            if (resultPanel != null)
-                resultPanel.SetActive(true);
+            if (resultPanel != null) resultPanel.Show();
         }
 
         private void OnComboAchieved(string playerId, int combo)

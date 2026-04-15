@@ -1,6 +1,7 @@
 using System.Linq;
 using Infrastructure.Audio;
 using Infrastructure.Network;
+using Presentation.Animations;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
@@ -11,7 +12,7 @@ namespace Presentation.UI
 {
     public class OnlineGameUI : BaseGameUI
     {
-        [SerializeField] protected GameObject onlineGamePanel;
+        [SerializeField] protected PanelAnimator onlineGamePanel;
         [SerializeField] protected TMP_Text turnText;
         [SerializeField] private TMP_Text opponentScore, opponentMoves;
         [SerializeField] private TMP_Text resultText, finalOpponentScore;
@@ -33,7 +34,7 @@ namespace Presentation.UI
             if (_network != null)
             {
                 base.Start();
-                if (onlineGamePanel != null) onlineGamePanel.SetActive(true);
+                if (onlineGamePanel != null) onlineGamePanel.Show();
                 _gameState.OnGameFinished += OnGameFinished;
             }
             else
@@ -96,8 +97,9 @@ namespace Presentation.UI
             if (finalOpponentScore != null && op != null)
                 finalOpponentScore.text = $"{op.Score}";
 
-            resultPanel.SetActive(true);
-            onlineGamePanel.SetActive(false);
+            resultPanel.Show();
+            
+            onlineGamePanel.Hide();
         }
 
         private void HandleTurnChanged(string id, Vector2Int arg2, Vector2Int arg3)

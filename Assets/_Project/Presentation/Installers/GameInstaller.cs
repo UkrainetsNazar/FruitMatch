@@ -22,11 +22,11 @@ namespace Core.Installers
                                  && NetworkManager.Singleton.IsListening;
 
             if (!isNetworkGame)
-                Container.Bind<IGameController>().To<GameController>().AsSingle();
+                Container.Bind<IGameController>().To<SinglePlayerController>().AsSingle();
             else if (NetworkManager.Singleton.IsHost)
-                Container.Bind<IGameController>().To<HostGameController>().AsSingle();
+                Container.Bind<IGameController>().To<MultiplayerHostController>().AsSingle();
             else
-                Container.Bind<IGameController>().To<ClientGameController>().AsSingle();
+                Container.Bind<IGameController>().To<MultiplayerClientController>().AsSingle();
 
             if (isNetworkGame)
             {

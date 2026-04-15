@@ -1,6 +1,7 @@
 using Core.Interfaces;
 using DG.Tweening;
 using Infrastructure.Audio;
+using Presentation.Animations;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
@@ -13,21 +14,22 @@ namespace Presentation.UI
     public abstract class BaseGameUI : MonoBehaviour
     {
         [SerializeField] protected TMP_Text playerScore, playerMoves;
-        [SerializeField] protected GameObject resultPanel;
+        [SerializeField] protected PanelAnimator resultPanel;
         [SerializeField] protected TMP_Text finalPlayerScore;
-        [SerializeField] protected Button _returnButton;
+        [SerializeField] protected ButtonAnimator _returnButton;
         [SerializeField] protected TMP_Text musicVolumeText, sfxVolumeText;
         [SerializeField] protected Slider musicVolumeSlider, sfxVolumeSlider;
-        [SerializeField] protected GameObject settingsPanel;
+        [SerializeField] protected PanelAnimator settingsPanel;
 
         [Inject] protected IGameStateService _gameState;
+
+        public bool IsVisible => gameObject.activeSelf;
 
         protected virtual void Start()
         {
             _gameState.OnDataUpdated += RefreshUI;
 
-            // ADD:
-            if (settingsPanel != null) settingsPanel.SetActive(false);
+            if (settingsPanel != null) settingsPanel.Hide();
             if (musicVolumeSlider != null) VolumeSliderBinder.BindMusic(musicVolumeSlider, musicVolumeText);
             if (sfxVolumeSlider != null) VolumeSliderBinder.BindSfx(sfxVolumeSlider, sfxVolumeText);
         }
@@ -35,7 +37,7 @@ namespace Presentation.UI
         protected virtual void Update()
         {
             if (Input.GetKeyDown(KeyCode.Escape) && settingsPanel != null)
-                settingsPanel.SetActive(!settingsPanel.activeSelf);
+                if (settingsPanel.IsVisible) settingsPanel.Hide(); else settingsPanel.Show();
         }
 
         protected virtual void OnDestroy()

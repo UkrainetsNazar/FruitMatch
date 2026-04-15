@@ -1,15 +1,12 @@
-using System;
 using System.Linq;
-using Core.Domain;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
-using Infrastructure.Audio;
 using Presentation.Views;
 using UnityEngine;
 
 namespace Data.Services
 {
-    public class GameController : IGameController
+    public class SinglePlayerController : IGameController
     {
         private readonly IMatchBoard _matchBoard;
         private readonly IBoardFactory _boardFactory;
@@ -22,7 +19,7 @@ namespace Data.Services
         private int _totalScore = 0;
         private const string LocalPlayerId = "Local";
 
-        public GameController(
+        public SinglePlayerController(
             IMatchBoard matchBoard,
             IBoardFactory boardFactory,
             IBoardView boardView,
