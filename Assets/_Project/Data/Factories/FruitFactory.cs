@@ -1,5 +1,6 @@
 using System;
-using Core.Domain;
+using Core.Domain.Entities;
+using Core.Domain.Enums;
 using Core.Interfaces;
 using UnityEngine;
 

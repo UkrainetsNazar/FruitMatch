@@ -1,4 +1,4 @@
-using Core.Domain;
+using Core.Domain.Entities;
 using Presentation.Animations;
 using UnityEngine;
 

@@ -1,8 +1,8 @@
 using Cysharp.Threading.Tasks;
-using Core.Domain;
 using System.Collections.Generic;
 using UnityEngine;
 using Presentation.Views;
+using Core.Domain.ValueObjects;
 
 namespace Core.Interfaces
 {

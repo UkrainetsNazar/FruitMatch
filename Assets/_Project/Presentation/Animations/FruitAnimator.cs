@@ -16,19 +16,22 @@ namespace Presentation.Animations
             _fruitView = fruitView;
         }
 
+        private void OnDestroy()
+        {
+            transform.DOKill();
+        }
+
         public async UniTask AnimateFall(List<Vector2> worldPath)
         {
             transform.DOKill();
             _fruitView.ResetScale();
             if (worldPath.Count == 0) return;
 
-
-            var sequence = DOTween.Sequence();
+            var sequence = DOTween.Sequence().SetLink(gameObject);
 
             for (int i = 0; i < worldPath.Count; i++)
             {
-                bool isLastStep = (i == worldPath.Count - 1);
-
+                bool isLastStep = i == worldPath.Count - 1;
                 float duration = isLastStep ? _stepDuration * 1.5f : _stepDuration;
                 Ease easeType = isLastStep ? Ease.OutBounce : Ease.Linear;
 
@@ -47,19 +50,22 @@ namespace Presentation.Animations
             _fruitView.ResetScale();
             await transform.DOMove(worldPos, 0.15f)
                 .SetEase(Ease.OutCubic)
+                .SetLink(gameObject)
                 .AsyncWaitForCompletion();
         }
 
         public async UniTask AnimateDestroy()
         {
             transform.DOKill();
-            var sequence = DOTween.Sequence();
+            var sequence = DOTween.Sequence().SetLink(gameObject);
 
             sequence.Append(transform.DOMove(transform.position + Vector3.up * 0.5f, 0.2f).SetEase(Ease.OutQuad));
             sequence.Join(transform.DOScale(0f, 0.4f).SetEase(Ease.InBack));
             sequence.Join(transform.DORotate(new Vector3(0, 0, 90), 0.4f));
 
             await sequence.AsyncWaitForCompletion();
+
+            if (this == null) return;
 
             transform.localPosition = Vector3.zero;
             transform.localScale = Vector3.one;
@@ -69,8 +75,9 @@ namespace Presentation.Animations
         public void PlayPulse()
         {
             transform.DOKill(complete: false);
-            transform.DOPunchScale(Vector3.one * 0.3f, 0.4f, vibrato: 1, elasticity: 0.5f)
-                     .SetEase(Ease.OutQuad);
+            transform.DOPunchScale(Vector3.one * 0.2f, 0.3f, vibrato: 1, elasticity: 0.5f)
+                     .SetEase(Ease.OutQuad)
+                     .SetLink(gameObject);
         }
     }
 }

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Core.Domain;
+using Core.Domain.Entities;
+using Core.Domain.Enums;
+using Core.Domain.ValueObjects;
 using UnityEngine;
 
 namespace Core.Interfaces
@@ -18,7 +20,7 @@ namespace Core.Interfaces
         List<FruitMovement> ApplyGravityWithTypes(Queue<FruitType> syncedTypes);
         List<FruitMovement> BuildSpawnMovements();
         int[] ShuffleBoard();
-        (Vector2Int, Vector2Int)? FindHint();
+        (Vector2Int, Vector2Int, int)? FindHint();
         bool HasFruitAt(Vector2Int pos);
         bool HasAnyValidMove();
     }

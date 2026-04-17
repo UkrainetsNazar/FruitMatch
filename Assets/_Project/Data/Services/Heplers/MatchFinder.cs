@@ -1,5 +1,7 @@
 using System.Collections.Generic;
-using Core.Domain;
+using System.Linq;
+using Core.Domain.Entities;
+using Core.Domain.ValueObjects;
 using UnityEngine;
 
 namespace Data.Services
@@ -89,9 +91,11 @@ namespace Data.Services
             }
             return false;
         }
-        public (Vector2Int, Vector2Int)? FindFirstValidMove(Board board)
+        
+        public (Vector2Int from, Vector2Int to, int score)? FindBestMove(Board board)
         {
             var directions = new[] { Vector2Int.right, Vector2Int.up };
+            (Vector2Int from, Vector2Int to, int score)? best = null;
 
             for (int x = 0; x < board.Width; x++)
             {
@@ -109,14 +113,17 @@ namespace Data.Services
                         if (!nCell.IsUsable || nCell.Fruit == null) continue;
 
                         (cell.Fruit, nCell.Fruit) = (nCell.Fruit, cell.Fruit);
-                        bool hasMatch = FindMatches(board).Count > 0;
+                        var matches = FindMatches(board);
+                        int score = matches.SelectMany(m => m.MatchedPositions).Distinct().Count();
                         (cell.Fruit, nCell.Fruit) = (nCell.Fruit, cell.Fruit);
 
-                        if (hasMatch) return (pos, neighbour);
+                        if (score > 0 && (best == null || score > best.Value.score))
+                            best = (pos, neighbour, score);
                     }
                 }
             }
-            return null;
+
+            return best;
         }
     }
 }

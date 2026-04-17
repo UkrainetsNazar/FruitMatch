@@ -2,19 +2,28 @@ using System;
 using System.Threading;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
+using Data.Services.Helpers;
 using UnityEngine;
 
-namespace Presentation.Views
+namespace Presentation.Utils
 {
     public class HintSystem : IDisposable
     {
         private readonly IBoardView _boardView;
+        private readonly AStarHintService _hintService;
         private CancellationTokenSource _cts;
         private const float HintDelay = 10f;
+
+        public HintSystem(IBoardView boardView, IMatchBoard matchBoard)
+        {
+            _boardView = boardView;
+            _hintService = new AStarHintService(matchBoard);
+        }
 
         public HintSystem(IBoardView boardView)
         {
             _boardView = boardView;
+            _hintService = null;
         }
 
         public void OnTurnStarted(Vector2Int from, Vector2Int to)
@@ -35,16 +44,26 @@ namespace Presentation.Views
             _boardView.ClearHint();
         }
 
-        private async UniTaskVoid RunHintTimer(Vector2Int from, Vector2Int to, CancellationToken ct)
+        private async UniTaskVoid RunHintTimer(
+            Vector2Int from, Vector2Int to, CancellationToken ct)
         {
-            await UniTask.Delay(TimeSpan.FromSeconds(HintDelay), cancellationToken: ct)
-                         .SuppressCancellationThrow();
+            await UniTask.Delay(
+                TimeSpan.FromSeconds(HintDelay), cancellationToken: ct)
+                .SuppressCancellationThrow();
 
-            if (ct.IsCancellationRequested) return;
+            if (ct.IsCancellationRequested || _boardView == null) return;
 
-            if (_boardView == null) return;
+            var hint = _hintService?.FindBestHint();
 
-            _boardView.ShowHint(from, to);
+            if (hint != null)
+            {
+                var (hintFrom, hintTo, _) = hint.Value;
+                _boardView.ShowHint(hintFrom, hintTo);
+            }
+            else
+            {
+                _boardView.ShowHint(from, to);
+            }
         }
 
         public void Dispose() => Cancel();

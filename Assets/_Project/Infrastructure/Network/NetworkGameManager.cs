@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Core.Domain;
+using Core.Domain.ValueObjects;
 using Unity.Netcode;
 using UnityEngine;
 

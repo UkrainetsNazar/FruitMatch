@@ -6465,7 +6465,7 @@ GameObject:
   - component: {fileID: 1734721380}
   - component: {fileID: 1734721379}
   m_Layer: 5
-  m_Name: ResultCanva
+  m_Name: OverlayCanvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

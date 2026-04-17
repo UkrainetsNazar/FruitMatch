@@ -3,7 +3,7 @@ using Data.Services;
 using Infrastructure.Network;
 using Zenject;
 
-namespace Core.Installers
+namespace Presentation.Installers
 {
     public class ProjectInstaller : MonoInstaller
     {

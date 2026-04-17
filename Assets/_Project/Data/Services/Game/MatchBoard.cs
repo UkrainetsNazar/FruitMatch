@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Core.Domain;
+using Core.Domain.Entities;
+using Core.Domain.Enums;
+using Core.Domain.ValueObjects;
 using Core.Interfaces;
 using UnityEngine;
 
@@ -177,6 +179,6 @@ namespace Data.Services
 
         public bool HasAnyValidMove() => _matchFinder.HasAnyValidMove(_board);
 
-        public (Vector2Int, Vector2Int)? FindHint() => _matchFinder.FindFirstValidMove(_board);
+        public (Vector2Int, Vector2Int, int)? FindHint() => _matchFinder.FindBestMove(_board);
     }
 }

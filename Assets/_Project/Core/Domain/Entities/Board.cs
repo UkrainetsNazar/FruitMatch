@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Core.Domain
+namespace Core.Domain.Entities
 {
     public class Board
     {

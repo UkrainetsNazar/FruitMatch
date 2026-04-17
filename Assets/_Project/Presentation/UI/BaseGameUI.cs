@@ -3,9 +3,7 @@ using DG.Tweening;
 using Infrastructure.Audio;
 using Presentation.Animations;
 using TMPro;
-using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Zenject;
 

@@ -8,8 +8,9 @@ using Presentation.Views;
 using Infrastructure.Network;
 using Unity.Netcode;
 using Presentation.UI;
+using Presentation.Utils;
 
-namespace Core.Installers
+namespace Presentation.Installers
 {
     public class GameInstaller : MonoInstaller
     {

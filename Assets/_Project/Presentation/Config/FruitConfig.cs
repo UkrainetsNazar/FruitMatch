@@ -1,4 +1,4 @@
-using Core.Domain;
+using Core.Domain.Enums;
 using UnityEngine;
 
 namespace Presentation.Config

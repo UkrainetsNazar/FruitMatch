@@ -1,6 +1,6 @@
-using System;
+using Core.Domain.Enums;
 
-namespace Core.Domain
+namespace Core.Domain.Entities
 {
     public class Fruit
     {

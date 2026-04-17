@@ -1,7 +1,8 @@
 using System.Linq;
+using Core.Domain.Enums;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
-using Presentation.Views;
+using Presentation.Utils;
 using UnityEngine;
 
 namespace Data.Services
@@ -31,7 +32,7 @@ namespace Data.Services
             _boardView = boardView;
             _previewManager = previewManager;
             _gameState = gameState;
-            _hint = new HintSystem(_boardView);
+            _hint = new HintSystem(_boardView, _matchBoard);
         }
 
         public async UniTask StartGame()
@@ -129,7 +130,7 @@ namespace Data.Services
             var hint = _matchBoard.FindHint();
             if (hint == null) return;
 
-            var (from, to) = hint.Value;
+            var (from, to, _) = hint.Value;
             _hint.OnTurnStarted(from, to);
         }
     }

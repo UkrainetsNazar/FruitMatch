@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Core.Domain;
+using Core.Domain.Entities;
+using Core.Domain.Enums;
+using Core.Domain.ValueObjects;
 using Core.Interfaces;
 using UnityEngine;
 

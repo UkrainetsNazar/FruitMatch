@@ -1,4 +1,5 @@
 using Core.Domain;
+using Core.Domain.Entities;
 using Presentation.Config;
 using Presentation.Pool;
 using Presentation.Views;

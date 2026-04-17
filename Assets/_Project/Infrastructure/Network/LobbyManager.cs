@@ -4,9 +4,9 @@ using Unity.Services.Authentication;
 using Unity.Services.Lobbies;
 using Unity.Services.Lobbies.Models;
 using UnityEngine;
-using Core.Domain;
 using Core.Interfaces;
 using System;
+using Core.Domain.Entities;
 
 namespace Infrastructure.Network
 {

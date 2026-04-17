@@ -1,7 +1,7 @@
 using Infrastructure.Network;
 using Zenject;
 
-namespace Core.Installers
+namespace Presentation.Installers
 {
     public class LobbyInstaller : MonoInstaller
     {

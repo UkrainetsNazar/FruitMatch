@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
-using Core.Domain;
+using Core.Domain.Enums;
+using Core.Domain.ValueObjects;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
 using Infrastructure.Network;
-using Presentation.Views;
+using Presentation.Utils;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -39,7 +40,7 @@ namespace Data.Services
             _gameState = gameState;
             _network = network;
 
-            _hint = new HintSystem(_boardView);
+            _hint = new HintSystem(_boardView, _matchBoard);
             _turnManager = new TurnManager(network, matchBoard);
             _scoreTracker = new ScoreTracker(network, gameState);
             _matchProcessor = new MatchProcessor(matchBoard, boardView, gameState, network);
@@ -93,6 +94,7 @@ namespace Data.Services
 
             await ProcessAndFinalizeTurn();
             _turnManager.SwitchTurn(_hint);
+            _gameState.SetPhase(_turnManager.IsMyTurn ? GamePhase.Playing : GamePhase.Paused);
         }
 
         private void OnMoveReceived(Vector2Int from, Vector2Int to, string senderId)
@@ -117,6 +119,7 @@ namespace Data.Services
             await _boardView.PlaySwap(from, to);
             await ProcessAndFinalizeTurn();
             _turnManager.SwitchTurn(_hint);
+            _gameState.SetPhase(_turnManager.IsMyTurn ? GamePhase.Playing : GamePhase.Paused);
         }
 
         private async UniTask ProcessAndFinalizeTurn()

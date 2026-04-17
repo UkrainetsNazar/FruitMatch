@@ -1,4 +1,5 @@
-using Core.Domain;
+using Core.Domain.Entities;
+using Core.Domain.Enums;
 
 namespace Core.Interfaces
 {

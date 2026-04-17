@@ -1,18 +1,16 @@
 using System;
 using System.Collections.Generic;
-using Core.Domain;
+using Core.Domain.Enums;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
-using Data.Factories;
-using Infrastructure.Audio;
 using Infrastructure.Network;
-using Presentation.Views;
+using Presentation.Utils;
 using Unity.Netcode;
 using UnityEngine;
 
 namespace Data.Services
 {
-    public class MultiplayerClientController: IGameController
+    public class MultiplayerClientController : IGameController
     {
         private readonly IBoardView _boardView;
         private readonly IBoardFactory _boardFactory;

@@ -1,4 +1,3 @@
-using Core.Domain;
 using Core.Interfaces;
 using Infrastructure.Audio;
 using Infrastructure.Network;
@@ -7,7 +6,6 @@ using TMPro;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 using Zenject;
 
 namespace Presentation.Ui
@@ -25,9 +23,6 @@ namespace Presentation.Ui
 
         void Start()
         {
-            if (pausePanel != null)
-                pausePanel.Hide();
-
             returnButton.onClick.AddListener(() =>
             {
                 AudioManager.PlayButtonClick();

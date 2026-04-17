@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using Core.Domain;
+using Core.Domain.ValueObjects;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
 using Presentation.Config;

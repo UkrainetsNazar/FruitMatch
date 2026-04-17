@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Core.Domain
+namespace Core.Domain.ValueObjects
 {
     public class MatchResult
     {
