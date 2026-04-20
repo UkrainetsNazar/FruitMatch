@@ -1,5 +1,6 @@
 using Core.Interfaces;
 using DG.Tweening;
+using Infrastructure.PostProcessing;
 using UnityEngine;
 using Zenject;
 
@@ -16,6 +17,7 @@ namespace Presentation.EntryPoints
 
         private async void Start()
         {
+            PostProcessingController.OnGameStart();
             await _gameController.StartGame();
         }
     }

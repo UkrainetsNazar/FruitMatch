@@ -6,6 +6,7 @@ using Core.Domain.ValueObjects;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
 using Infrastructure.Audio;
+using Infrastructure.PostProcessing;
 using Presentation.Pool;
 using Presentation.Views;
 using UnityEngine;
@@ -48,6 +49,7 @@ namespace Presentation.Utils
         public async UniTask PlayDestroy(List<Vector2Int> positions, int score = 0)
         {
             var tasks = new List<UniTask>();
+            PostProcessingController.OnFruitsDestroyed(positions.Count);
             foreach (var pos in positions)
             {
                 if (!_registry.TryGet(pos, out var view)) continue;

@@ -1,10 +1,8 @@
 using Core.Interfaces;
 using DG.Tweening;
-using Infrastructure.Audio;
 using Presentation.Animations;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 using Zenject;
 
 namespace Presentation.UI
@@ -15,9 +13,6 @@ namespace Presentation.UI
         [SerializeField] protected PanelAnimator resultPanel;
         [SerializeField] protected TMP_Text finalPlayerScore;
         [SerializeField] protected ButtonAnimator _returnButton;
-        [SerializeField] protected TMP_Text musicVolumeText, sfxVolumeText;
-        [SerializeField] protected Slider musicVolumeSlider, sfxVolumeSlider;
-        [SerializeField] protected PanelAnimator settingsPanel;
 
         [Inject] protected IGameStateService _gameState;
 
@@ -26,16 +21,6 @@ namespace Presentation.UI
         protected virtual void Start()
         {
             _gameState.OnDataUpdated += RefreshUI;
-
-            if (settingsPanel != null) settingsPanel.Hide();
-            if (musicVolumeSlider != null) VolumeSliderBinder.BindMusic(musicVolumeSlider, musicVolumeText);
-            if (sfxVolumeSlider != null) VolumeSliderBinder.BindSfx(sfxVolumeSlider, sfxVolumeText);
-        }
-
-        protected virtual void Update()
-        {
-            if (Input.GetKeyDown(KeyCode.Escape) && settingsPanel != null)
-                if (settingsPanel.IsVisible) settingsPanel.Hide(); else settingsPanel.Show();
         }
 
         protected virtual void OnDestroy()

@@ -7,7 +7,6 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Zenject;
-using Core.Interfaces;
 using Unity.Netcode;
 using Infrastructure.Audio;
 using Presentation.Animations;
@@ -48,9 +47,12 @@ namespace Presentation.UI
         [SerializeField] private TMP_Text musicVolumeText, sfxVolumeText;
         [SerializeField] private ButtonAnimator backButton, quitButton;
 
+        [Header("Loading")]
+        [SerializeField] private PanelAnimator _loadingPanel;
+        [SerializeField] private TMP_Text _loadingText;
+
         [Inject] private LobbyManager _lobbyManager;
         [Inject] private NetworkService _networkService;
-        [Inject] private IGameStateService _gameState;
 
         private readonly string[] _shapeNames = { "Random", "Square", "Ring", "Diamond", "Hourglass" };
         private int _selectedShapeIndex = 0;
@@ -134,6 +136,12 @@ namespace Presentation.UI
             _lobbyPanelGO.Show();
         }
 
+        private void OnGameLoading()
+        {
+            _loadingPanel.Show();
+            _loadingText.text = "Host is starting the game...";
+        }
+
         private async UniTaskVoid OnCreateClicked()
         {
             var name = string.IsNullOrWhiteSpace(_lobbyNameInput.text)
@@ -211,7 +219,7 @@ namespace Presentation.UI
             _startButton.interactable = isFull;
 
             gameSettingsPanel.SetActive(_lobbyManager.IsHost);
-            
+
             RenderPlayerList();
         }
 
@@ -255,6 +263,9 @@ namespace Presentation.UI
         {
             _startButton.interactable = false;
 
+            _loadingPanel.Show();
+            _loadingText.text = "Creating session...";
+
             int shapeChoice = _selectedShapeIndex == 0 ? -1 : _selectedShapeIndex - 1;
             int fruitCount = (int)fruitCountSlider.value;
 
@@ -263,8 +274,17 @@ namespace Presentation.UI
 
             await _networkService.StartHostAsync();
 
+            var network = FindObjectOfType<NetworkGameManager>();
+            network?.BroadcastGameLoadingClientRpc();
+
+            _loadingText.text = "Waiting for opponent...";
+
+            _loadingText.text = "Waiting for opponent...";
+
             await UniTask.WaitUntil(() =>
                 NetworkManager.Singleton.ConnectedClients.Count >= 2);
+
+            _loadingText.text = "Starting game...";
 
             NetworkManager.Singleton.SceneManager.LoadScene("Game", LoadSceneMode.Single);
         }

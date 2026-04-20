@@ -316,7 +316,7 @@ MonoBehaviour:
     m_Bits: 1
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 0
+  m_RenderPostProcessing: 1
   m_Antialiasing: 0
   m_AntialiasingQuality: 2
   m_StopNaN: 0
@@ -848,6 +848,11 @@ MonoBehaviour:
   continueButton: {fileID: 2077235878}
   quitButton: {fileID: 1424171211}
   pausePanel: {fileID: 486949445}
+  settingsPanel: {fileID: 486949445}
+  musicVolumeText: {fileID: 1442414253}
+  sfxVolumeText: {fileID: 215729498}
+  musicVolumeSlider: {fileID: 485647278}
+  sfxVolumeSlider: {fileID: 246800015}
 --- !u!1 &215729496
 GameObject:
   m_ObjectHideFlags: 0
@@ -1635,6 +1640,73 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!1 &407931574
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 407931576}
+  - component: {fileID: 407931575}
+  - component: {fileID: 407931577}
+  m_Layer: 0
+  m_Name: Global Volume
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &407931575
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 407931574}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_IsGlobal: 1
+  priority: 0
+  blendDistance: 0
+  weight: 1
+  sharedProfile: {fileID: 11400000, guid: 7df9bf1e6c7b74c95847c3de16e56050, type: 2}
+--- !u!4 &407931576
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 407931574}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.31450868, y: -0.41907516, z: -0.038349655}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &407931577
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 407931574}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dab6d88e8de7e4e66aae882d40f84d14, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _volume: {fileID: 407931575}
+  _camera: {fileID: 111922383}
+  _shakeStrength: 0.08
+  _shakeDuration: 0.25
+  _shakeVibrato: 15
 --- !u!1 &423968662
 GameObject:
   m_ObjectHideFlags: 0
@@ -1744,11 +1816,6 @@ MonoBehaviour:
   resultPanel: {fileID: 1520656498}
   finalPlayerScore: {fileID: 991546707}
   _returnButton: {fileID: 1707763047}
-  musicVolumeText: {fileID: 1442414253}
-  sfxVolumeText: {fileID: 215729498}
-  musicVolumeSlider: {fileID: 485647278}
-  sfxVolumeSlider: {fileID: 246800015}
-  settingsPanel: {fileID: 486949445}
   onlineGamePanel: {fileID: 1936045124}
   turnText: {fileID: 1697945604}
   opponentScore: {fileID: 704999572}
@@ -2618,11 +2685,6 @@ MonoBehaviour:
   resultPanel: {fileID: 1520656498}
   finalPlayerScore: {fileID: 991546707}
   _returnButton: {fileID: 1707763047}
-  musicVolumeText: {fileID: 1442414253}
-  sfxVolumeText: {fileID: 215729498}
-  musicVolumeSlider: {fileID: 485647278}
-  sfxVolumeSlider: {fileID: 246800015}
-  settingsPanel: {fileID: 486949445}
   singleGamePanel: {fileID: 631889568}
   playerMultiplier: {fileID: 277022681}
 --- !u!4 &646144537
@@ -7852,3 +7914,4 @@ SceneRoots:
   - {fileID: 429715934}
   - {fileID: 646144537}
   - {fileID: 1734721382}
+  - {fileID: 407931576}

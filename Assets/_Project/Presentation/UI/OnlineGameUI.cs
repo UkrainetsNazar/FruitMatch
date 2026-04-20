@@ -50,11 +50,6 @@ namespace Presentation.UI
                 SceneManager.LoadScene("Lobby");
             });
         }
-
-        protected override void Update()
-        {
-            base.Update();
-        }
         
         protected override void OnDestroy()
         {

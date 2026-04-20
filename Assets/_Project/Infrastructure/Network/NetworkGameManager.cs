@@ -26,6 +26,7 @@ namespace Infrastructure.Network
         public event Action<Vector2Int, Vector2Int> OnSwapReceived;
         public event Action OnSwapFailed;
         public event Action OnGameStarted;
+        public event Action OnGameLoading;
 
         // Connection events
         public event Action OnOpponentDisconnected;
@@ -142,6 +143,11 @@ namespace Infrastructure.Network
             OnComboReceived?.Invoke(playerId, combo);
         }
 
+        [ClientRpc]
+        public void BroadcastGameLoadingClientRpc()
+        {
+            OnGameLoading?.Invoke();
+        }
 
         private static List<FruitMovement> ToMovementList(FruitMovementData[] data) =>
         data.Select(m => new FruitMovement

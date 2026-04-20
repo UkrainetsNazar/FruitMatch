@@ -6,6 +6,7 @@ using TMPro;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 using Zenject;
 
 namespace Presentation.Ui
@@ -16,6 +17,11 @@ namespace Presentation.Ui
         [SerializeField] private ButtonAnimator returnButton, continueButton, quitButton;
         [SerializeField] private PanelAnimator pausePanel;
 
+        [Header("Settings")]
+        [SerializeField] private PanelAnimator settingsPanel;
+        [SerializeField] private TMP_Text musicVolumeText, sfxVolumeText;
+        [SerializeField] private Slider musicVolumeSlider, sfxVolumeSlider;
+
         [InjectOptional] private NetworkGameManager _network;
         [Inject] private IGameStateService _gameState;
 
@@ -23,6 +29,10 @@ namespace Presentation.Ui
 
         void Start()
         {
+            if (settingsPanel != null) settingsPanel.Hide();
+            if (musicVolumeSlider != null) VolumeSliderBinder.BindMusic(musicVolumeSlider, musicVolumeText);
+            if (sfxVolumeSlider != null) VolumeSliderBinder.BindSfx(sfxVolumeSlider, sfxVolumeText);
+
             returnButton.onClick.AddListener(() =>
             {
                 AudioManager.PlayButtonClick();
@@ -34,7 +44,10 @@ namespace Presentation.Ui
             continueButton.onClick.AddListener(TogglePause);
 
             quitButton.onClick.AddListener(() =>
-            { AudioManager.PlayButtonClick(); Application.Quit(); });
+            {
+                AudioManager.PlayButtonClick();
+                Application.Quit();
+            });
 
             if (_network != null) _network.OnOpponentDisconnected += OnOpponentDisconnected;
             _gameState.OnGameFinished += _ => _isGameFinished = true;
