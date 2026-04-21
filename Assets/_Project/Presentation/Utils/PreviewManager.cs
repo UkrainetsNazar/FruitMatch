@@ -81,14 +81,14 @@ namespace Presentation.Utils
             }
         }
 
-        public UniTask ConfirmPreview()
+        public async UniTask ConfirmPreview()
         {
-            if (!_isPreviewActive) return UniTask.CompletedTask;
+            if (!_isPreviewActive) return;
             _boardView.SwapFruitViewKeys(_previewFrom, _previewTo);
             _isPreviewActive = false;
-            return UniTask.CompletedTask;
+            await UniTask.CompletedTask;
         }
-
+        
         public bool IsPreviewActive => _isPreviewActive;
         public bool IsAnimating => _isAnimating;
     }

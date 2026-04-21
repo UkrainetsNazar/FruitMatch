@@ -261,7 +261,7 @@ namespace Presentation.UI
 
         private async UniTaskVoid OnStartClicked()
         {
-            _startButton.interactable = false;
+            _lobbyPanelGO.Hide();
 
             _loadingPanel.Show();
             _loadingText.text = "Creating session...";

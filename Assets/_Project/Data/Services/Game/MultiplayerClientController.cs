@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Core.Domain.Enums;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
@@ -17,6 +18,7 @@ namespace Data.Services
         private readonly IFruitFactory _fruitFactory;
         private readonly PreviewManager _previewManager;
         private readonly IGameStateService _gameState;
+        private readonly IMatchBoard _matchBoard;
         private readonly NetworkGameManager _network;
         private readonly HintSystem _hint;
 
@@ -30,8 +32,9 @@ namespace Data.Services
 
         private string _localPlayerId => NetworkManager.Singleton.LocalClientId.ToString();
 
-        public MultiplayerClientController(IFruitFactory fruitFactory, IBoardFactory boardFactory, IBoardView boardView, PreviewManager previewManager, IGameStateService gameState, NetworkGameManager network)
+        public MultiplayerClientController(IMatchBoard matchBoard, IFruitFactory fruitFactory, IBoardFactory boardFactory, IBoardView boardView, PreviewManager previewManager, IGameStateService gameState, NetworkGameManager network)
         {
+            _matchBoard = matchBoard;
             _fruitFactory = fruitFactory;
             _boardFactory = boardFactory;
             _boardView = boardView;
@@ -62,9 +65,14 @@ namespace Data.Services
                 _fruitFactory?.SetFruitTypeCount(fruitCount);
 
             _network.OnShuffleReceived += movements =>
-                Enqueue(() => _boardView.PlayShuffle(movements));
+            {
+                Enqueue(async () =>
+                {
+                    _matchBoard.SyncGravity(movements);
+                    await _boardView.PlayShuffle(movements);
+                });
+            };
 
-            _network.OnSwapReceived += OnSwapReceived;
             _network.OnSwapFailed += () =>
             {
                 _isLocalPredicting = false;
@@ -73,9 +81,45 @@ namespace Data.Services
 
             _network.OnComboReceived += (playerId, combo) =>
                 _gameState.NotifyCombo(playerId, combo);
+
+            _network.OnGravityApplied += movements =>
+            {
+                Enqueue(async () =>
+                {
+                    _matchBoard.SyncGravity(movements);
+                    await _boardView.PlayGravity(movements, 0);
+                });
+            };
+
             _network.OnMatchesProcessed += (destroyed, score) =>
-                Enqueue(() => _boardView.PlayDestroy(destroyed, score));
-            _network.OnGravityApplied += movements => Enqueue(() => _boardView.PlayGravity(movements, 0));
+            {
+                if (_isLocalPredicting)
+                    return;
+
+                Enqueue(async () =>
+                {
+                    UpdateBoardData(destroyed);
+                    await _boardView.PlayDestroy(destroyed, score);
+                });
+            };
+
+            _network.OnSwapReceived += (from, to) =>
+            {
+                Enqueue(async () =>
+                {
+                    if (_isLocalPredicting && from == _pendingFrom && to == _pendingTo)
+                    {
+                        _isLocalPredicting = false;
+                        return;
+                    }
+
+                    if (!_isMyTurn)
+                    {
+                        _matchBoard.ForceSwap(from, to);
+                        await _boardView.PlaySwap(from, to);
+                    }
+                });
+            };
 
             _network.OnGameEnded += winnerId =>
             {
@@ -102,41 +146,51 @@ namespace Data.Services
 
         public async UniTask StartGame() { _gameState.SetPhase(GamePhase.Lobby); await UniTask.CompletedTask; }
 
-        public UniTask OnPlayerSwap(Vector2Int from, Vector2Int to)
+        public async UniTask OnPlayerSwap(Vector2Int from, Vector2Int to)
         {
-            if (!_isMyTurn || _isProcessingQueue)
-                return UniTask.CompletedTask;
+            if (!_isMyTurn || _isProcessingQueue) return;
 
-            _hint.OnPlayerActed();
+            if (_matchBoard.TrySwap(from, to))
+            {
+                _isLocalPredicting = true;
+                _pendingFrom = from;
+                _pendingTo = to;
 
-            _isLocalPredicting = true;
-            _pendingFrom = from;
-            _pendingTo = to;
+                _network.SendMoveServerRpc(from, to, _localPlayerId);
 
-            _network.SendMoveServerRpc(from, to, _localPlayerId);
+                await UniTask.WaitUntil(() => !_previewManager.IsAnimating);
 
-            return UniTask.CompletedTask;
+                await _previewManager.ConfirmPreview();
+
+                Enqueue(async () => await ExecuteFullTurnLocal(from, to));
+            }
         }
 
-        private void OnSwapReceived(Vector2Int from, Vector2Int to)
+        private async UniTask ExecuteFullTurnLocal(Vector2Int from, Vector2Int to)
         {
-            Enqueue(async () =>
+            var matches = _matchBoard.FindMatches();
+            if (matches.Count > 0)
             {
-                if (_isLocalPredicting && from == _pendingFrom && to == _pendingTo)
-                {
-                    _isLocalPredicting = false;
-                    await _previewManager.ConfirmPreview();
-                    return;
-                }
+                var destroyed = matches.SelectMany(m => m.MatchedPositions).Distinct().ToList();
+                int score = matches.Sum(m => m.Score);
 
-                await _boardView.PlaySwap(from, to);
-            });
+                _matchBoard.ProcessMatches(matches, 1);
+                UpdateBoardData(destroyed);
+
+                await _boardView.PlayDestroy(destroyed, score);
+            }
         }
 
         private void Enqueue(Func<UniTask> action)
         {
             _animationQueue.Enqueue(action);
             if (!_isProcessingQueue) ProcessQueue().Forget();
+        }
+
+        private void UpdateBoardData(List<Vector2Int> destroyed)
+        {
+            foreach (var pos in destroyed)
+                _matchBoard.CurrentBoard.GetCell(pos.x, pos.y).Fruit = null;
         }
 
         private async UniTaskVoid ProcessQueue()

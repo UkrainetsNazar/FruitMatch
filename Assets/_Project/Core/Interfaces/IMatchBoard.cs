@@ -23,5 +23,7 @@ namespace Core.Interfaces
         (Vector2Int, Vector2Int, int)? FindHint();
         bool HasFruitAt(Vector2Int pos);
         bool HasAnyValidMove();
+        void ForceSwap(Vector2Int from, Vector2Int to);
+        void SyncGravity(List<FruitMovement> movements);
     }
 }

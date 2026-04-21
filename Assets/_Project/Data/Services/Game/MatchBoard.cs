@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Core.Domain.Entities;
 using Core.Domain.Enums;
 using Core.Domain.ValueObjects;
@@ -180,5 +181,33 @@ namespace Data.Services
         public bool HasAnyValidMove() => _matchFinder.HasAnyValidMove(_board);
 
         public (Vector2Int, Vector2Int, int)? FindHint() => _matchFinder.FindBestMove(_board);
+
+        public void ForceSwap(Vector2Int from, Vector2Int to)
+        {
+            var cellA = _board.GetCell(from.x, from.y);
+            var cellB = _board.GetCell(to.x, to.y);
+            (cellA.Fruit, cellB.Fruit) = (cellB.Fruit, cellA.Fruit);
+        }
+
+        public void SyncGravity(List<FruitMovement> movements)
+        {
+            var sortedMovements = movements.OrderBy(m => m.To.y).ToList();
+
+            foreach (var move in sortedMovements)
+            {
+                var targetCell = _board.GetCell(move.To.x, move.To.y);
+
+                if (move.From.y >= _board.Height)
+                {
+                    targetCell.Fruit = _fruitFactory.Create((FruitType)move.SyncFruitType);
+                }
+                else
+                {
+                    var sourceCell = _board.GetCell(move.From.x, move.From.y);
+                    targetCell.Fruit = sourceCell.Fruit;
+                    sourceCell.Fruit = null;
+                }
+            }
+        }
     }
 }
