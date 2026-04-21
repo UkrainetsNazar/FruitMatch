@@ -1,10 +1,9 @@
-using System.Collections.Generic;
 using System.Linq;
 using Core.Domain.Enums;
-using Core.Domain.ValueObjects;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
 using Infrastructure.Network;
+using Infrastructure.Utils;
 using Presentation.Utils;
 using Unity.Netcode;
 using UnityEngine;
@@ -107,11 +106,7 @@ namespace Data.Services
         {
             if (!_matchBoard.TrySwap(from, to))
             {
-                ClientRpcParams rpcParams = new()
-                {
-                    Send = new ClientRpcSendParams { TargetClientIds = new[] { ulong.Parse(senderId) } }
-                };
-                _network.NotifySwapFailedClientRpc(rpcParams);
+                _network.NotifySwapFailedClientRpc();
                 return;
             }
 
@@ -155,7 +150,7 @@ namespace Data.Services
             while (!_matchBoard.HasAnyValidMove());
 
             var movements = _matchBoard.BuildSpawnMovements();
-            _network.BroadcastShuffleClientRpc(ToNetworkData(movements));
+            _network.BroadcastShuffleClientRpc(NetworkDataUtils.ToNetworkData(movements));
             await _boardView.PlayShuffle(movements);
 
             await _matchProcessor.ProcessCascade(_turnManager.CurrentTurnPlayerId, countScore: false);
@@ -167,14 +162,5 @@ namespace Data.Services
             while (NetworkManager.Singleton.ConnectedClients.Count < 2)
                 await UniTask.Delay(100);
         }
-
-        private FruitMovementData[] ToNetworkData(List<FruitMovement> movements) =>
-            movements.Select(m => new FruitMovementData
-            {
-                From = m.From,
-                To = m.To,
-                Path = m.Path.ToArray(),
-                NewFruitType = m.SyncFruitType
-            }).ToArray();
     }
 }

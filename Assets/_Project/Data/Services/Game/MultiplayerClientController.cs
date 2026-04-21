@@ -97,7 +97,7 @@ namespace Data.Services
         {
             _boardFactory.CreateByShape(shapeIndex, seed);
             await UniTask.WaitUntil(() => _boardView.IsInitialized);
-            _network.SendBoardReadyServerRpc(_localPlayerId);
+            _network.SendBoardReadyServerRpc();
         }
 
         public async UniTask StartGame() { _gameState.SetPhase(GamePhase.Lobby); await UniTask.CompletedTask; }

@@ -4,6 +4,7 @@ using Core.Domain.ValueObjects;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
 using Infrastructure.Network;
+using Infrastructure.Utils;
 
 namespace Data.Services
 {
@@ -45,7 +46,7 @@ namespace Data.Services
                 var movements = _matchBoard.ApplyGravity();
 
                 _network.BroadcastMatchesClientRpc(destroyed.ToArray(), stepScore);
-                _network.BroadcastGravityClientRpc(ToNetworkData(movements));
+                _network.BroadcastGravityClientRpc(NetworkDataUtils.ToNetworkData(movements));
 
                 await _boardView.PlayDestroy(destroyed, stepScore);
                 await _boardView.PlayGravity(movements, 0);
@@ -62,14 +63,5 @@ namespace Data.Services
 
             return totalScore;
         }
-
-        private FruitMovementData[] ToNetworkData(List<FruitMovement> movements) =>
-            movements.Select(m => new FruitMovementData
-            {
-                From = m.From,
-                To = m.To,
-                Path = m.Path.ToArray(),
-                NewFruitType = m.SyncFruitType
-            }).ToArray();
     }
 }

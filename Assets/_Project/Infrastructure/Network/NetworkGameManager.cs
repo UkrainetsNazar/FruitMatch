@@ -61,93 +61,65 @@ namespace Infrastructure.Network
         public void SendMoveServerRpc(
             Vector2Int from,
             Vector2Int to,
-            string senderId)
-        {
-            OnMoveReceived?.Invoke(from, to, senderId);
-        }
+            string senderId) => OnMoveReceived?.Invoke(from, to, senderId);
 
         [ServerRpc(RequireOwnership = false)]
-        public void SendBoardReadyServerRpc(string playerId)
-        {
+        public void SendBoardReadyServerRpc() =>
             OnClientBoardReady?.Invoke();
-        }
 
         // ── Хост → всі клієнти ───────────────────────────────
 
         [ClientRpc]
-        public void BroadcastMatchesClientRpc(Vector2Int[] destroyed, int score)
-        {
+        public void BroadcastMatchesClientRpc(Vector2Int[] destroyed, int score) =>
             OnMatchesProcessed?.Invoke(new List<Vector2Int>(destroyed), score);
-        }
 
         [ClientRpc]
         public void BroadcastGravityClientRpc(FruitMovementData[] movements) =>
             OnGravityApplied?.Invoke(ToMovementList(movements));
 
         [ClientRpc]
-        public void BroadcastTurnClientRpc(string playerId, Vector2Int hintFrom, Vector2Int hintTo)
-        {
+        public void BroadcastTurnClientRpc(string playerId, Vector2Int hintFrom, Vector2Int hintTo) =>
             OnTurnChanged?.Invoke(playerId, hintFrom, hintTo);
-        }
 
         [ClientRpc]
-        public void BroadcastGameStartedClientRpc()
-        {
+        public void BroadcastGameStartedClientRpc() =>
             OnGameStarted?.Invoke();
 
-        }
-
         [ClientRpc]
-        public void BroadcastBoardDataClientRpc(int shapeIndex, int seed)
-        {
+        public void BroadcastBoardDataClientRpc(int shapeIndex, int seed) =>
             OnBoardDataReceived?.Invoke(shapeIndex, seed);
-        }
 
         [ClientRpc]
-        public void BroadcastSwapClientRpc(Vector2Int from, Vector2Int to)
-        {
+        public void BroadcastSwapClientRpc(Vector2Int from, Vector2Int to) =>
             OnSwapReceived?.Invoke(from, to);
-        }
 
         [ClientRpc]
-        public void NotifySwapFailedClientRpc(ClientRpcParams clientRpcParams = default)
-        {
+        public void NotifySwapFailedClientRpc() =>
             OnSwapFailed?.Invoke();
-        }
 
         [ClientRpc]
-        public void UpdatePlayerStatsClientRpc(string playerId, int score, int moves)
-        {
+        public void UpdatePlayerStatsClientRpc(string playerId, int score, int moves) =>
             OnStatsReceived?.Invoke(playerId, score, moves);
-        }
 
         [ClientRpc]
         public void BroadcastShuffleClientRpc(FruitMovementData[] movements) =>
             OnShuffleReceived?.Invoke(ToMovementList(movements));
 
         [ClientRpc]
-        public void BroadcastGameEndedClientRpc(string winnerId)
-        {
+        public void BroadcastGameEndedClientRpc(string winnerId) =>
             OnGameEnded?.Invoke(winnerId);
-        }
 
         [ClientRpc]
-        public void BroadcastGameSettingsClientRpc(int fruitCount)
-        {
+        public void BroadcastGameSettingsClientRpc(int fruitCount) =>
             OnGameSettingsReceived?.Invoke(fruitCount);
-        }
 
         [ClientRpc]
-        public void BroadcastComboClientRpc(string playerId, int combo)
-        {
+        public void BroadcastComboClientRpc(string playerId, int combo) =>
             OnComboReceived?.Invoke(playerId, combo);
-        }
 
         [ClientRpc]
-        public void BroadcastGameLoadingClientRpc()
-        {
+        public void BroadcastGameLoadingClientRpc() =>
             OnGameLoading?.Invoke();
-        }
 
         private static List<FruitMovement> ToMovementList(FruitMovementData[] data) =>
         data.Select(m => new FruitMovement
