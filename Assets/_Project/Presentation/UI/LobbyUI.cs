@@ -10,6 +10,8 @@ using Zenject;
 using Unity.Netcode;
 using Infrastructure.Audio;
 using Presentation.Animations;
+using System.Threading;
+using System;
 
 namespace Presentation.UI
 {
@@ -57,6 +59,11 @@ namespace Presentation.UI
         private readonly string[] _shapeNames = { "Random", "Square", "Ring", "Diamond", "Hourglass" };
         private int _selectedShapeIndex = 0;
         private string _pendingRelayCode;
+        private float _lastRefreshTime = -999f;
+        private const float RefreshCooldown = 3f;
+        private CancellationTokenSource _refreshLoopCts;
+        private bool _startAborted = false;
+
 
         private void Start()
         {
@@ -77,6 +84,7 @@ namespace Presentation.UI
             _lobbyManager.OnKicked += OnKickedFromLobby;
             _lobbyManager.OnHostLeft += OnHostLeftLobby;
             _lobbyManager.OnRelayCodeReady += OnRelayCodeReady;
+            _lobbyManager.OnLobbyUpdated += OnLobbyUpdatedDuringStart;
 
             boardShape.onClick.AddListener(OnShapeCycleClicked);
             fruitCountSlider.minValue = 5;
@@ -89,6 +97,7 @@ namespace Presentation.UI
             UpdateShapeButtonText();
 
             ShowBrowsePanel();
+            StartRefreshLoop().Forget();
             OnRefreshClicked().Forget();
 
             settingsPanel.Hide();
@@ -120,6 +129,9 @@ namespace Presentation.UI
             _lobbyManager.OnKicked -= OnKickedFromLobby;
             _lobbyManager.OnHostLeft -= OnHostLeftLobby;
             _lobbyManager.OnRelayCodeReady -= OnRelayCodeReady;
+            _lobbyManager.OnLobbyUpdated -= OnLobbyUpdatedDuringStart;
+            _refreshLoopCts?.Cancel();
+            _refreshLoopCts?.Dispose();
         }
 
         // ── Browse Panel ──────────────────────────────────────
@@ -128,47 +140,66 @@ namespace Presentation.UI
         {
             _browsePanelGO.Show();
             _lobbyPanelGO.Hide();
+            StartRefreshLoop().Forget();
         }
 
         private void ShowLobbyPanel()
         {
+            _refreshLoopCts?.Cancel();
             _browsePanelGO.Hide();
             _lobbyPanelGO.Show();
-        }
-
-        private void OnGameLoading()
-        {
-            _loadingPanel.Show();
-            _loadingText.text = "Host is starting the game...";
         }
 
         private async UniTaskVoid OnCreateClicked()
         {
             var name = string.IsNullOrWhiteSpace(_lobbyNameInput.text)
-                ? $"Lobby_{Random.Range(1000, 9999)}"
+                ? $"Lobby_{UnityEngine.Random.Range(1000, 9999)}"
                 : _lobbyNameInput.text;
 
             _createButton.interactable = false;
 
-            await _lobbyManager.CreateLobbyAsync(name);
+            var lobby = await _lobbyManager.CreateLobbyAsync(name);
+
+            if (lobby != null)
+            {
+                ShowLobbyPanel();
+                RefreshLobbyPanel();
+            }
 
             _createButton.interactable = true;
-
-            ShowLobbyPanel();
-            RefreshLobbyPanel();
         }
 
-        private async UniTaskVoid OnRefreshClicked()
+        private async UniTask OnRefreshClicked()
         {
-            _refreshButton.interactable = false;
+            if (_lobbyPanelGO.IsVisible) return;
 
+            if (Time.time - _lastRefreshTime < RefreshCooldown && !Mathf.Approximately(_lastRefreshTime, -999f)) return;
+            _lastRefreshTime = Time.time;
+
+            _refreshButton.interactable = false;
             var lobbies = await _lobbyManager.GetLobbiesAsync();
 
             if (this == null || !gameObject.activeInHierarchy) return;
 
             RenderLobbyList(lobbies);
-
             _refreshButton.interactable = true;
+        }
+
+        private async UniTaskVoid StartRefreshLoop()
+        {
+            _refreshLoopCts?.Cancel();
+            _refreshLoopCts = new CancellationTokenSource();
+            var token = _refreshLoopCts.Token;
+
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    await OnRefreshClicked();
+                    await UniTask.Delay(TimeSpan.FromSeconds(5), cancellationToken: token);
+                }
+            }
+            catch (OperationCanceledException) { }
         }
 
         private void RenderLobbyList(List<Lobby> lobbies)
@@ -198,10 +229,24 @@ namespace Presentation.UI
 
         private async UniTaskVoid OnJoinClicked(string lobbyId)
         {
-            await _lobbyManager.JoinLobbyAsync(lobbyId);
+            _refreshButton.interactable = false;
+            _createButton.interactable = false;
 
-            ShowLobbyPanel();
-            RefreshLobbyPanel();
+            var lobby = await _lobbyManager.JoinLobbyAsync(lobbyId);
+
+            if (lobby != null)
+            {
+                ShowLobbyPanel();
+                RefreshLobbyPanel();
+            }
+            else
+            {
+                await OnRefreshClicked();
+                Debug.LogWarning("Failed to join: Lobby might be gone.");
+            }
+
+            _refreshButton.interactable = true;
+            _createButton.interactable = true;
         }
 
         // ── Lobby Panel ───────────────────────────────────────
@@ -256,13 +301,19 @@ namespace Presentation.UI
         {
             await _lobbyManager.LeaveLobbyAsync();
             ShowBrowsePanel();
-            OnRefreshClicked().Forget();
+        }
+
+        private void OnLobbyUpdatedDuringStart()
+        {
+            var lobby = _lobbyManager.CurrentLobby;
+            if (lobby != null && lobby.Players.Count < 2)
+                _startAborted = true;
         }
 
         private async UniTaskVoid OnStartClicked()
         {
+            _startAborted = false;
             _lobbyPanelGO.Hide();
-
             _loadingPanel.Show();
             _loadingText.text = "Creating session...";
 
@@ -279,13 +330,26 @@ namespace Presentation.UI
 
             _loadingText.text = "Waiting for opponent...";
 
-            _loadingText.text = "Waiting for opponent...";
+            float elapsed = 0f;
+            const float timeout = 30f;
 
-            await UniTask.WaitUntil(() =>
-                NetworkManager.Singleton.ConnectedClients.Count >= 2);
+            while (NetworkManager.Singleton.ConnectedClients.Count < 2)
+            {
+                elapsed += Time.deltaTime;
+
+                if (elapsed >= timeout || _startAborted)
+                {
+                    await _networkService.Disconnect();
+                    _loadingPanel.Hide();
+                    ShowBrowsePanel();
+                    OnRefreshClicked().Forget();
+                    return;
+                }
+
+                await UniTask.Yield();
+            }
 
             _loadingText.text = "Starting game...";
-
             NetworkManager.Singleton.SceneManager.LoadScene("Game", LoadSceneMode.Single);
         }
 

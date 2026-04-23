@@ -64,9 +64,14 @@ namespace Infrastructure.Network
             Debug.Log("Client started");
         }
 
-        public void Disconnect()
+        public async UniTask Disconnect()
         {
-            NetworkManager.Singleton.Shutdown();
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+            {
+                NetworkManager.Singleton.Shutdown();
+                await UniTask.WaitUntil(() => !NetworkManager.Singleton.IsListening);
+            }
+
             IsHost = false;
             IsClient = false;
         }

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Core.Domain.Enums;
+using Core.Domain.ValueObjects;
 using Core.Interfaces;
 using Cysharp.Threading.Tasks;
 using Infrastructure.Network;
@@ -44,98 +44,105 @@ namespace Data.Services
 
             _hint = new HintSystem(_boardView);
 
-            _network.OnBoardDataReceived += OnBoardDataReceived;
-
-            _network.OnStatsReceived += (playerId, score, moves) =>
-            {
-                _gameState.UpdateScore(playerId, score);
-                _gameState.UpdateMoves(playerId, moves);
-            };
-
-            _network.OnTurnChanged += (id, hintFrom, hintTo) =>
-            {
-                _isMyTurn = id == _localPlayerId;
-                _gameState.SetPhase(_isMyTurn ? GamePhase.Playing : GamePhase.Paused);
-
-                if (_isMyTurn) _hint.OnTurnStarted(hintFrom, hintTo);
-                else _hint.OnTurnEnded();
-            };
-
-            _network.OnGameSettingsReceived += fruitCount =>
-                _fruitFactory?.SetFruitTypeCount(fruitCount);
-
-            _network.OnShuffleReceived += movements =>
-            {
-                Enqueue(async () =>
-                {
-                    _matchBoard.SyncGravity(movements);
-                    await _boardView.PlayShuffle(movements);
-                });
-            };
-
-            _network.OnSwapFailed += () =>
-            {
-                _isLocalPredicting = false;
-                _previewManager.ResetPreview().Forget();
-            };
-
-            _network.OnComboReceived += (playerId, combo) =>
-                _gameState.NotifyCombo(playerId, combo);
-
-            _network.OnGravityApplied += movements =>
-            {
-                Enqueue(async () =>
-                {
-                    _matchBoard.SyncGravity(movements);
-                    await _boardView.PlayGravity(movements, 0);
-                });
-            };
-
-            _network.OnMatchesProcessed += (destroyed, score) =>
-            {
-                if (_isLocalPredicting)
-                    return;
-
-                Enqueue(async () =>
-                {
-                    UpdateBoardData(destroyed);
-                    await _boardView.PlayDestroy(destroyed, score);
-                });
-            };
-
-            _network.OnSwapReceived += (from, to) =>
-            {
-                Enqueue(async () =>
-                {
-                    if (_isLocalPredicting && from == _pendingFrom && to == _pendingTo)
-                    {
-                        _isLocalPredicting = false;
-                        return;
-                    }
-
-                    if (!_isMyTurn)
-                    {
-                        _matchBoard.ForceSwap(from, to);
-                        await _boardView.PlaySwap(from, to);
-                    }
-                });
-            };
-
-            _network.OnGameEnded += winnerId =>
-            {
-                string myId = _localPlayerId;
-                bool iWon = winnerId == myId;
-                bool isDraw = string.IsNullOrEmpty(winnerId);
-                var me = _gameState.GetPlayerData(myId);
-                _gameState.NotifyGameFinished(me.Score);
-            };
+            SubscribeToEvents();
         }
 
-        private void OnBoardDataReceived(int shapeIndex, int seed)
+        private void SubscribeToEvents()
+        {
+            _network.OnBoardDataReceived += HandleBoardDataReceived;
+            _network.OnStatsReceived += HandleStatsReceived;
+            _network.OnTurnChanged += HandleTurnChanged;
+            _network.OnGameSettingsReceived += HandleGameSettings;
+            _network.OnShuffleReceived += HandleShuffle;
+            _network.OnSwapFailed += HandleSwapFailed;
+            _network.OnComboReceived += HandleCombo;
+            _network.OnMatchesProcessed += HandleMatchesProcessed;
+            _network.OnGravityApplied += HandleGravityApplied;
+            _network.OnSwapReceived += HandleSwapReceived;
+            _network.OnGameEnded += HandleGameEnded;
+        }
+
+        #region Network Handlers
+
+        private void HandleBoardDataReceived(int shapeIndex, int seed)
         {
             if (NetworkManager.Singleton.IsHost) return;
             InitializeBoardAsync(shapeIndex, seed).Forget();
         }
+
+        private void HandleStatsReceived(string playerId, int score, int moves)
+        {
+            _gameState.UpdateScore(playerId, score);
+            _gameState.UpdateMoves(playerId, moves);
+        }
+
+        private void HandleTurnChanged(string id, Vector2Int hintFrom, Vector2Int hintTo)
+        {
+            _isMyTurn = id == _localPlayerId;
+            _gameState.SetPhase(_isMyTurn ? GamePhase.Playing : GamePhase.Paused);
+
+            if (_isMyTurn) _hint.OnTurnStarted(hintFrom, hintTo);
+            else _hint.OnTurnEnded();
+        }
+
+        private void HandleGameSettings(int fruitCount) =>
+            _fruitFactory?.SetFruitTypeCount(fruitCount);
+
+        private void HandleShuffle(List<FruitMovement> movements)
+        {
+            Enqueue(async () =>
+            {
+                _matchBoard.SyncGravity(movements);
+                await _boardView.PlayShuffle(movements);
+            });
+        }
+
+        private void HandleSwapFailed()
+        {
+            if (_isLocalPredicting)
+            {
+                _isLocalPredicting = false;
+                _matchBoard.ForceSwap(_pendingTo, _pendingFrom);
+
+                Enqueue(async () => await _previewManager.ResetPreview());
+            }
+        }
+
+        private void HandleCombo(string playerId, int combo) =>
+            _gameState.NotifyCombo(playerId, combo);
+
+        private void HandleMatchesProcessed(List<Vector2Int> destroyed, int score) =>
+            Enqueue(() => _boardView.PlayDestroy(destroyed, score));
+
+        private void HandleGravityApplied(List<FruitMovement> movements) =>
+            Enqueue(() => _boardView.PlayGravity(movements, 0));
+
+        private void HandleSwapReceived(Vector2Int from, Vector2Int to)
+        {
+            if (_isLocalPredicting && from == _pendingFrom && to == _pendingTo)
+            {
+                _isLocalPredicting = false;
+                _previewManager.ConfirmPreview().Forget();
+                return;
+            }
+
+            Enqueue(async () =>
+            {
+                _matchBoard.ForceSwap(from, to);
+                await _boardView.PlaySwap(from, to);
+            });
+        }
+
+        private void HandleGameEnded(string winnerId)
+        {
+            string myId = _localPlayerId;
+            var me = _gameState.GetPlayerData(myId);
+            _gameState.NotifyGameFinished(me.Score);
+        }
+
+        #endregion
+
+        #region Infrastructure & Helpers
 
         private async UniTaskVoid InitializeBoardAsync(int shapeIndex, int seed)
         {
@@ -148,49 +155,27 @@ namespace Data.Services
 
         public async UniTask OnPlayerSwap(Vector2Int from, Vector2Int to)
         {
-            if (!_isMyTurn || _isProcessingQueue) return;
+            if (!_isMyTurn || _isProcessingQueue || _isLocalPredicting) return;
 
-            if (_matchBoard.TrySwap(from, to))
+            _hint.OnPlayerActed();
+
+            if (!_matchBoard.TrySwap(from, to))
             {
-                _isLocalPredicting = true;
-                _pendingFrom = from;
-                _pendingTo = to;
-
-                _network.SendMoveServerRpc(from, to, _localPlayerId);
-
-                await UniTask.WaitUntil(() => !_previewManager.IsAnimating);
-
-                await _previewManager.ConfirmPreview();
-
-                Enqueue(async () => await ExecuteFullTurnLocal(from, to));
+                await _previewManager.ResetPreview();
+                return;
             }
-        }
 
-        private async UniTask ExecuteFullTurnLocal(Vector2Int from, Vector2Int to)
-        {
-            var matches = _matchBoard.FindMatches();
-            if (matches.Count > 0)
-            {
-                var destroyed = matches.SelectMany(m => m.MatchedPositions).Distinct().ToList();
-                int score = matches.Sum(m => m.Score);
+            _isLocalPredicting = true;
+            _pendingFrom = from;
+            _pendingTo = to;
 
-                _matchBoard.ProcessMatches(matches, 1);
-                UpdateBoardData(destroyed);
-
-                await _boardView.PlayDestroy(destroyed, score);
-            }
+            _network.SendMoveServerRpc(from, to, _localPlayerId);
         }
 
         private void Enqueue(Func<UniTask> action)
         {
             _animationQueue.Enqueue(action);
             if (!_isProcessingQueue) ProcessQueue().Forget();
-        }
-
-        private void UpdateBoardData(List<Vector2Int> destroyed)
-        {
-            foreach (var pos in destroyed)
-                _matchBoard.CurrentBoard.GetCell(pos.x, pos.y).Fruit = null;
         }
 
         private async UniTaskVoid ProcessQueue()
@@ -207,5 +192,7 @@ namespace Data.Services
 
             _isProcessingQueue = false;
         }
+
+        #endregion
     }
 }

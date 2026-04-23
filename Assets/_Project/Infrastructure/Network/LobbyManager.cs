@@ -7,6 +7,7 @@ using UnityEngine;
 using Core.Interfaces;
 using System;
 using Core.Domain.Entities;
+using System.Threading;
 
 namespace Infrastructure.Network
 {
@@ -14,6 +15,7 @@ namespace Infrastructure.Network
     {
         private Lobby _currentLobby;
         private readonly IGameStateService _gameState;
+        private bool _isProcessing;
 
         public event Action OnLobbyUpdated;
         public event Action OnKicked;
@@ -21,6 +23,8 @@ namespace Infrastructure.Network
         public event Action<string> OnRelayCodeReady;
 
         public Lobby CurrentLobby => _currentLobby;
+
+        private CancellationTokenSource _pollCts;
 
         public bool IsHost =>
             _currentLobby?.HostId ==
@@ -35,16 +39,20 @@ namespace Infrastructure.Network
 
         public async UniTask<Lobby> CreateLobbyAsync(string lobbyName, int maxPlayers = 2)
         {
+            if (_isProcessing) return null;
+            _isProcessing = true;
+
             try
             {
+                await LeaveLobbyAsync();
+
                 var options = new CreateLobbyOptions
                 {
                     IsPrivate = false,
                     Player = CreatePlayer(_gameState.LocalPlayer.PlayerName)
                 };
 
-                _currentLobby = await LobbyService.Instance
-                    .CreateLobbyAsync(lobbyName, maxPlayers, options);
+                _currentLobby = await LobbyService.Instance.CreateLobbyAsync(lobbyName, maxPlayers, options);
 
                 StartHeartbeat().Forget();
                 StartPolling().Forget();
@@ -54,30 +62,50 @@ namespace Infrastructure.Network
             catch (LobbyServiceException e)
             {
                 Debug.LogError($"CreateLobby failed: {e.Message}");
-                throw;
+                return null;
+            }
+            finally
+            {
+                _isProcessing = false;
             }
         }
 
         public async UniTask<Lobby> JoinLobbyAsync(string lobbyId)
         {
+            if (_isProcessing) return null;
+            _isProcessing = true;
+
             try
             {
+                await LeaveLobbyAsync();
+
                 var options = new JoinLobbyByIdOptions
                 {
                     Player = CreatePlayer(_gameState.LocalPlayer.PlayerName)
                 };
 
-                _currentLobby = await LobbyService.Instance
-                    .JoinLobbyByIdAsync(lobbyId, options);
+                _currentLobby = await LobbyService.Instance.JoinLobbyByIdAsync(lobbyId, options);
 
                 StartPolling().Forget();
-
                 return _currentLobby;
             }
             catch (LobbyServiceException e)
             {
-                Debug.LogError($"JoinLobby failed: {e.Message}");
-                throw;
+                _currentLobby = null;
+
+                if (e.Reason == LobbyExceptionReason.LobbyNotFound)
+                {
+                    Debug.LogWarning("This lobby is no longer exist.");
+                }
+                else
+                {
+                    Debug.LogError($"JoinLobby failed: {e.Message}");
+                }
+                return null;
+            }
+            finally
+            {
+                _isProcessing = false;
             }
         }
 
@@ -129,23 +157,38 @@ namespace Infrastructure.Network
         #region Relay
         public async UniTask SetRelayCodeAsync(string relayCode)
         {
+            if (_currentLobby == null)
+            {
+                Debug.LogError("SetRelayCode failed: Current lobby is null. You might have been disconnected.");
+                return;
+            }
+
+            if (!IsHost)
+            {
+                Debug.LogWarning("Only host can set relay code.");
+                return;
+            }
+
             try
             {
                 var options = new UpdateLobbyOptions
                 {
                     Data = new Dictionary<string, DataObject>
                     {
-                        { "RelayJoinCode", new DataObject(
-                            DataObject.VisibilityOptions.Member, relayCode) }
+                        { "RelayJoinCode", new DataObject(DataObject.VisibilityOptions.Member, relayCode) }
                     }
                 };
 
-                _currentLobby = await LobbyService.Instance
-                    .UpdateLobbyAsync(_currentLobby.Id, options);
+                string lobbyId = _currentLobby.Id;
+                _currentLobby = await LobbyService.Instance.UpdateLobbyAsync(lobbyId, options);
             }
             catch (LobbyServiceException e)
             {
                 Debug.LogError($"SetRelayCode failed: {e.Message}");
+                if (e.Reason == LobbyExceptionReason.LobbyNotFound)
+                {
+                    _currentLobby = null;
+                }
                 throw;
             }
         }
@@ -179,19 +222,24 @@ namespace Infrastructure.Network
 
         public async UniTask LeaveLobbyAsync()
         {
+            _pollCts?.Cancel();
+            _pollCts = null;
+
             if (_currentLobby == null) return;
 
             try
             {
-                await LobbyService.Instance.RemovePlayerAsync(
-                    _currentLobby.Id,
-                    AuthenticationService.Instance.PlayerId);
-
+                string lobbyIdToLeave = _currentLobby.Id;
                 _currentLobby = null;
+
+                await LobbyService.Instance.RemovePlayerAsync(
+                    lobbyIdToLeave,
+                    AuthenticationService.Instance.PlayerId);
             }
             catch (LobbyServiceException e)
             {
-                Debug.LogError($"LeaveLobby failed: {e.Message}");
+                if (e.Reason != LobbyExceptionReason.LobbyNotFound)
+                    Debug.LogWarning($"LeaveLobby error: {e.Message}");
             }
         }
 
@@ -217,27 +265,35 @@ namespace Infrastructure.Network
         {
             while (_currentLobby != null && IsHost)
             {
-                await LobbyService.Instance.SendHeartbeatPingAsync(_currentLobby.Id);
-                await UniTask.Delay(15000);
+                try
+                {
+                    await LobbyService.Instance.SendHeartbeatPingAsync(_currentLobby.Id);
+                }
+                catch (LobbyServiceException e)
+                {
+                    Debug.LogWarning($"Heartbeat failed: {e.Message}");
+                }
+                await UniTask.Delay(TimeSpan.FromSeconds(15));
             }
         }
 
         private async UniTaskVoid StartPolling()
         {
-            while (_currentLobby != null)
-            {
-                await UniTask.Delay(1500);
+            _pollCts?.Cancel();
+            _pollCts = new CancellationTokenSource();
+            var ct = _pollCts.Token;
 
-                if (_currentLobby == null) break;
+            while (_currentLobby != null && !ct.IsCancellationRequested)
+            {
+                bool cancelled = await UniTask.Delay(1100, cancellationToken: ct).SuppressCancellationThrow();
+                if (cancelled || _currentLobby == null) break;
 
                 try
                 {
-                    var updated = await LobbyService.Instance
-                        .GetLobbyAsync(_currentLobby.Id);
+                    var updated = await LobbyService.Instance.GetLobbyAsync(_currentLobby.Id);
 
                     var localId = AuthenticationService.Instance.PlayerId;
-                    bool stillInLobby = updated.Players
-                        .Exists(p => p.Id == localId);
+                    bool stillInLobby = updated.Players.Exists(p => p.Id == localId);
 
                     if (!stillInLobby)
                     {
@@ -246,35 +302,26 @@ namespace Infrastructure.Network
                         break;
                     }
 
-                    bool hostLeft = !updated.Players
-                        .Exists(p => p.Id == updated.HostId);
-
-                    if (hostLeft && !IsHost)
-                    {
-                        _currentLobby = null;
-                        OnHostLeft?.Invoke();
-                        break;
-                    }
-
                     _currentLobby = updated;
                     OnLobbyUpdated?.Invoke();
 
                     if (!IsHost && _currentLobby.Data != null)
                     {
-                        if (_currentLobby.Data.TryGetValue("RelayJoinCode", out var code)
-                            && !string.IsNullOrEmpty(code.Value))
+                        if (_currentLobby.Data.TryGetValue("RelayJoinCode", out var code) && !string.IsNullOrEmpty(code.Value))
                         {
                             OnRelayCodeReady?.Invoke(code.Value);
-                            _currentLobby = null;
-                            break;
+                            _pollCts.Cancel();
                         }
                     }
                 }
-                catch
+                catch (LobbyServiceException e)
                 {
-                    Debug.LogWarning("Lobby polling stopped");
-                    _currentLobby = null;
-                    break;
+                    if (e.Reason == LobbyExceptionReason.LobbyNotFound)
+                    {
+                        _currentLobby = null;
+                        OnHostLeft?.Invoke();
+                        break;
+                    }
                 }
             }
         }

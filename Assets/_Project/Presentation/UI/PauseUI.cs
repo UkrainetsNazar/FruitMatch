@@ -78,9 +78,22 @@ namespace Presentation.Ui
         {
             AudioManager.PlayButtonClick();
             if (pausePanel == null) return;
+
             header.text = "Pause";
             continueButton.gameObject.SetActive(true);
-            if (pausePanel.IsVisible) pausePanel.Hide(); else pausePanel.Show();
+
+            bool isOpening = !pausePanel.IsVisible;
+
+            if (isOpening)
+            {
+                pausePanel.Show();
+                Cursor.visible = false;
+            }
+            else
+            {
+                pausePanel.Hide();
+                Cursor.visible = false;
+            }
         }
     }
 }

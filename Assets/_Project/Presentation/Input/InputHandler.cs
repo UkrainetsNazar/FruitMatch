@@ -14,6 +14,7 @@ namespace Presentation.PlayerInput
 
         private Vector2Int _fromGridPos;
         private Vector2Int _toGridPos;
+        private bool _hasTarget;
         private Vector2 _startWorldPos;
         private bool _isDragging;
         private bool _isProcessing;
@@ -48,6 +49,7 @@ namespace Presentation.PlayerInput
 
             _fromGridPos = gridPos;
             _toGridPos = Vector2Int.zero;
+            _hasTarget = false;
             _isDragging = true;
         }
 
@@ -75,13 +77,14 @@ namespace Presentation.PlayerInput
             {
                 if (_previewManager.IsPreviewActive)
                     HandleResetPreview().Forget();
-                _toGridPos = Vector2Int.zero;
+                _hasTarget = false;
                 return;
             }
 
-            if (candidateTo == _toGridPos) return;
+            if (_hasTarget && candidateTo == _toGridPos) return;
 
             _toGridPos = candidateTo;
+            _hasTarget = true;
             if (!_matchBoard.HasFruitAt(_toGridPos)) return;
 
             HandlePreview().Forget();
@@ -90,7 +93,7 @@ namespace Presentation.PlayerInput
         private async UniTaskVoid HandleResetPreview()
         {
             await _previewManager.ResetPreview();
-            _toGridPos = Vector2Int.zero;
+            _hasTarget = false;
         }
 
         private async UniTaskVoid HandlePreview()
@@ -103,7 +106,7 @@ namespace Presentation.PlayerInput
             if (!_isDragging || _isProcessing) return;
             _isDragging = false;
 
-            if (!_previewManager.IsPreviewActive) return;
+            if (!_hasTarget || !_previewManager.IsPreviewActive) return;
 
             HandleSwap().Forget();
         }
