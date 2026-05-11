@@ -20,74 +20,88 @@ namespace Data.Services
         public List<FruitMovement> Apply(Board board, Func<FruitType> resolveFruitType)
         {
             var movements = new List<FruitMovement>();
-            bool anyAction;
+            bool changed;
 
             do
             {
-                anyAction = false;
+                changed = false;
 
-                while (ApplyMovementStep(board, movements))
-                    anyAction = true;
+                for (int y = 0; y < board.Height; y++)
+                {
+                    for (int x = 0; x < board.Width; x++)
+                    {
+                        var cell = board.GetCell(x, y);
+                        if (cell.IsUsable && cell.Fruit == null)
+                        {
+                            if (TryMoveFrom(board, cell, x, y + 1, movements, false))
+                            {
+                                changed = true;
+                            }
+                        }
+                    }
+                }
+
+                if (changed) continue;
 
                 if (TrySpawn(board, movements, resolveFruitType))
-                    anyAction = true;
+                {
+                    changed = true;
+                    continue;
+                }
 
-            } while (anyAction);
+                for (int y = 0; y < board.Height; y++)
+                {
+                    for (int x = 0; x < board.Width; x++)
+                    {
+                        var cell = board.GetCell(x, y);
+                        if (cell.IsUsable && cell.Fruit == null)
+                        {
+                            if (IsPathAboveBlocked(board, x, y))
+                            {
+                                if (TryMoveFrom(board, cell, x - 1, y + 1, movements, true) ||
+                                    TryMoveFrom(board, cell, x + 1, y + 1, movements, true))
+                                {
+                                    changed = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+            } while (changed);
 
             return movements;
         }
 
-        private bool ApplyMovementStep(Board board, List<FruitMovement> movements)
+        private bool IsPathAboveBlocked(Board board, int x, int y)
         {
-            bool moved = false;
+            var above = new Vector2Int(x, y + 1);
+            if (!board.IsValid(above)) return true;
 
-            for (int y = 0; y < board.Height; y++)
-            {
-                for (int x = 0; x < board.Width; x++)
-                {
-                    var cell = board.GetCell(x, y);
-
-                    if (!cell.IsUsable || cell.Fruit != null) continue;
-
-                    if (TryMoveFrom(board, cell, x, y + 1, movements))
-                    {
-                        moved = true;
-                        continue;
-                    }
-
-                    if (TryMoveFrom(board, cell, x - 1, y + 1, movements) ||
-                        TryMoveFrom(board, cell, x + 1, y + 1, movements))
-                    {
-                        moved = true;
-                    }
-                }
-            }
-            return moved;
+            var aboveCell = board.GetCell(above.x, above.y);
+            return !aboveCell.IsUsable || aboveCell.Fruit != null;
         }
 
-        private bool TryMoveFrom(Board board, Cell targetCell, int sourceX, int sourceY, List<FruitMovement> movements)
+        private bool TryMoveFrom(Board board, Cell targetCell, int sourceX, int sourceY, List<FruitMovement> movements, bool isDiagonal)
         {
             if (!board.IsValid(new Vector2Int(sourceX, sourceY))) return false;
-
             var sourceCell = board.GetCell(sourceX, sourceY);
 
-            if (sourceCell.IsUsable && sourceCell.Fruit != null)
-            {
-                if (sourceX != targetCell.Position.x)
-                {
-                    var straightDown = new Vector2Int(sourceX, sourceY - 1);
-                    if (board.IsValid(straightDown))
-                    {
-                        var belowSource = board.GetCell(straightDown.x, straightDown.y);
-                        if (belowSource.IsUsable && belowSource.Fruit == null) return false;
-                    }
-                }
+            if (!sourceCell.IsUsable || sourceCell.Fruit == null) return false;
 
-                MoveFruit(sourceCell, targetCell, movements);
-                return true;
+            if (isDiagonal)
+            {
+                var straightDown = new Vector2Int(sourceX, sourceY - 1);
+                if (board.IsValid(straightDown))
+                {
+                    var cellBelowSource = board.GetCell(straightDown.x, straightDown.y);
+                    if (cellBelowSource.IsUsable && cellBelowSource.Fruit == null)
+                        return false;
+                }
             }
 
-            return false;
+            MoveFruit(sourceCell, targetCell, movements);
+            return true;
         }
 
         private bool TrySpawn(Board board, List<FruitMovement> movements, Func<FruitType> resolveFruitType)

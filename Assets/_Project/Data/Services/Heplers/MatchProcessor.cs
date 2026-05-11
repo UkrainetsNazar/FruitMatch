@@ -33,7 +33,6 @@ namespace Data.Services
             while (matches.Count > 0)
             {
                 var destroyed = matches.SelectMany(m => m.MatchedPositions).Distinct().ToList();
-                _matchBoard.ProcessMatches(matches, currentCombo);
 
                 int stepScore = 0;
                 if (countScore)
@@ -43,12 +42,14 @@ namespace Data.Services
                     _gameState.UpdateScore(currentPlayerId, stepScore);
                 }
 
-                var movements = _matchBoard.ApplyGravity();
+                _matchBoard.ProcessMatches(matches, currentCombo);
 
                 _network.BroadcastMatchesClientRpc(destroyed.ToArray(), stepScore);
-                _network.BroadcastGravityClientRpc(NetworkDataUtils.ToNetworkData(movements));
-
                 await _boardView.PlayDestroy(destroyed, stepScore);
+
+                var movements = _matchBoard.ApplyGravity();
+
+                _network.BroadcastGravityClientRpc(NetworkDataUtils.ToNetworkData(movements));
                 await _boardView.PlayGravity(movements, 0);
 
                 if (countScore && currentCombo > 1)

@@ -23,17 +23,16 @@ namespace Infrastructure.Network
         {
             var joinCode = await _relayManager.CreateRelayAsync();
 
-            await _lobbyManager.SetRelayCodeAsync(joinCode);
+            var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
 
-            var transport = NetworkManager.Singleton
-                .GetComponent<UnityTransport>();
+            #if UNITY_WEBGL && !UNITY_EDITOR
+                transport.UseWebSockets = true;
+            #endif
 
             transport.SetRelayServerData(_relayManager.GetHostRelayData());
-
+            await _lobbyManager.SetRelayCodeAsync(joinCode);
             NetworkManager.Singleton.StartHost();
             IsHost = true;
-
-            Debug.Log("Host started");
         }
 
         public async UniTask StartClientAsync(string joinCode)
@@ -41,27 +40,16 @@ namespace Infrastructure.Network
             await _relayManager.JoinRelayAsync(joinCode);
 
             var nm = NetworkManager.Singleton;
-            if (nm == null)
-            {
-                Debug.LogError("NetworkManager is NULL");
-                return;
-            }
-
             var transport = nm.GetComponent<UnityTransport>();
-            if (transport == null)
-            {
-                Debug.LogError("UnityTransport is NULL");
-                return;
-            }
 
-            var relayData = _relayManager.GetClientRelayData();
+            #if UNITY_WEBGL && !UNITY_EDITOR
+                transport.UseWebSockets = true;
+            #endif
 
-            transport.SetRelayServerData(relayData);
-
+            transport.SetRelayServerData(_relayManager.GetClientRelayData());
+            await UniTask.Delay(200);
             nm.StartClient();
             IsClient = true;
-
-            Debug.Log("Client started");
         }
 
         public async UniTask Disconnect()

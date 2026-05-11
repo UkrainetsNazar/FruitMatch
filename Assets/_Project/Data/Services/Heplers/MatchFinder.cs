@@ -52,11 +52,6 @@ namespace Data.Services
                         result.MatchedPositions.AddRange(chain);
                         result.Score = chain.Count * 10;
                         results.Add(result);
-
-                        if (direction == Vector2Int.right)
-                            x += chain.Count - 1;
-                        else
-                            y += chain.Count - 1;
                     }
                 }
             }

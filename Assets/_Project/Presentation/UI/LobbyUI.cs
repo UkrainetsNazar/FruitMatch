@@ -323,33 +323,49 @@ namespace Presentation.UI
             PlayerPrefs.SetInt("LobbyShapeChoice", shapeChoice);
             PlayerPrefs.SetInt("LobbyFruitCount", fruitCount);
 
-            await _networkService.StartHostAsync();
-
-            var network = FindObjectOfType<NetworkGameManager>();
-            network?.BroadcastGameLoadingClientRpc();
+            try
+            {
+                await _networkService.StartHostAsync();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[Start] StartHostAsync failed: {e.Message}");
+                _loadingText.text = "Failed to create session.";
+                await UniTask.Delay(2000);
+                _loadingPanel.Hide();
+                _lobbyPanelGO.Show();
+                RefreshLobbyPanel();
+                return;
+            }
 
             _loadingText.text = "Waiting for opponent...";
 
-            float elapsed = 0f;
             const float timeout = 30f;
+            float elapsed = 0f;
 
             while (NetworkManager.Singleton.ConnectedClients.Count < 2)
             {
-                elapsed += Time.deltaTime;
+                await UniTask.Delay(200);
+                elapsed += 0.2f;
 
                 if (elapsed >= timeout || _startAborted)
                 {
+                    Debug.LogWarning("[Start] Timeout or aborted — disconnecting.");
                     await _networkService.Disconnect();
                     _loadingPanel.Hide();
                     ShowBrowsePanel();
                     OnRefreshClicked().Forget();
                     return;
                 }
-
-                await UniTask.Yield();
             }
 
             _loadingText.text = "Starting game...";
+
+            var network = FindObjectOfType<NetworkGameManager>();
+            network?.BroadcastGameLoadingClientRpc();
+
+            await UniTask.Delay(300);
+
             NetworkManager.Singleton.SceneManager.LoadScene("Game", LoadSceneMode.Single);
         }
 

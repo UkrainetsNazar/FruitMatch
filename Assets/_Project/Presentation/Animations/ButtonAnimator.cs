@@ -36,15 +36,29 @@ namespace Presentation.Animations
         }
 
         public void OnPointerEnter(PointerEventData _) =>
-            transform.DOScale(_originalScale * _hoverScale, _hoverDuration).SetEase(Ease.OutQuad);
+    transform.DOScale(_originalScale * _hoverScale, _hoverDuration)
+             .SetEase(Ease.OutQuad)
+             .SetLink(gameObject);
 
         public void OnPointerExit(PointerEventData _) =>
-            transform.DOScale(_originalScale, _hoverDuration).SetEase(Ease.OutQuad);
+            transform.DOScale(_originalScale, _hoverDuration)
+                     .SetEase(Ease.OutQuad)
+                     .SetLink(gameObject);
 
         public void OnPointerDown(PointerEventData _) =>
-            transform.DOScale(_originalScale * _pressScale, _pressDuration).SetEase(Ease.OutQuad);
+            transform.DOScale(_originalScale * _pressScale, _pressDuration)
+                     .SetEase(Ease.OutQuad)
+                     .SetLink(gameObject);
 
         public void OnPointerUp(PointerEventData _) =>
-            transform.DOScale(_originalScale * _hoverScale, _pressDuration).SetEase(Ease.OutQuad);
+            transform.DOScale(_originalScale * _hoverScale, _pressDuration)
+                     .SetEase(Ease.OutQuad)
+                     .SetLink(gameObject);
+
+        private void OnDisable()
+        {
+            transform.DOKill();
+            transform.localScale = _originalScale;
+        }
     }
 }

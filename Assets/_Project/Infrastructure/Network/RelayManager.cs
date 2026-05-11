@@ -12,18 +12,24 @@ namespace Infrastructure.Network
         private Allocation _hostAllocation;
         private JoinAllocation _clientAllocation;
 
+        #if UNITY_WEBGL && !UNITY_EDITOR
+            private const string ConnectionType = "udp";
+        #else
+            private const string ConnectionType = "dtls";
+        #endif
+
         public async UniTask<string> CreateRelayAsync(int maxConnections = 1)
         {
             try
             {
                 _hostAllocation = await RelayService.Instance.CreateAllocationAsync(maxConnections);
                 string joinCode = await RelayService.Instance.GetJoinCodeAsync(_hostAllocation.AllocationId);
-
+                Debug.Log($"[Relay] Created. JoinCode: {joinCode}, Protocol: {ConnectionType}");
                 return joinCode;
             }
             catch (RelayServiceException e)
             {
-                Debug.Log("CreateRelay failed: " + e.Message);
+                Debug.LogError("CreateRelay failed: " + e.Message);
                 throw;
             }
         }
@@ -33,6 +39,7 @@ namespace Infrastructure.Network
             try
             {
                 _clientAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
+                Debug.Log($"[Relay] Joined. Protocol: {ConnectionType}");
             }
             catch (RelayServiceException e)
             {
@@ -46,7 +53,7 @@ namespace Infrastructure.Network
             if (_hostAllocation == null)
                 throw new Exception("Host allocation wasn't created");
 
-            return new RelayServerData(_hostAllocation, "dtls");
+            return new RelayServerData(_hostAllocation, ConnectionType);
         }
 
         public RelayServerData GetClientRelayData()
@@ -54,7 +61,7 @@ namespace Infrastructure.Network
             if (_clientAllocation == null)
                 throw new Exception("Client allocation wasn't created");
 
-            return new RelayServerData(_clientAllocation, "dtls");
+            return new RelayServerData(_clientAllocation, ConnectionType);
         }
     }
 }
