@@ -80,9 +80,9 @@ namespace Presentation.Utils
             foreach (var move in movements.Where(m => m.From.y < boardHeight))
             {
                 if (!_registry.TryGet(move.From, out var view)) continue;
+
                 _registry.Remove(move.From);
-                _registry.Set(move.To, view);
-                tasks.Add(view.Animator.AnimateFall(BuildWorldPath(move.Path)));
+                tasks.Add(AnimateFallAndRegister(view, move.To, move.Path));
             }
 
             foreach (var column in movements.Where(m => m.From.y >= boardHeight)
@@ -98,6 +98,12 @@ namespace Presentation.Utils
         {
             await PlayDestroy(_registry.AllPositions());
             await PlayGravity(spawnMovements, 0);
+        }
+
+        private async UniTask AnimateFallAndRegister(FruitView view, Vector2Int targetPos, List<Vector2Int> path)
+        {
+            await view.Animator.AnimateFall(BuildWorldPath(path));
+            _registry.Set(targetPos, view);
         }
 
         private async UniTask SpawnColumnSequential(List<FruitMovement> column)
